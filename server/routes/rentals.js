@@ -129,5 +129,39 @@ router.post('/items/:id/bookings', auth, async (req, res, next) => {
   }
 });
 
+//Return an item (mark booking as returned and transaction as completed)
+router.put('/bookings/:id/return', auth, async (req, res, next) => {
+  try {
+    const booking = await Booking.findById(req.params.id).populate('item');
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    if (!booking.borrower.equals(req.user._id)) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    booking.status = 'returned';
+    booking.returnedAt = new Date();
+    await booking.save();
+
+    await Transaction.findOneAndUpdate(
+      { booking: booking._id },
+      { status: 'completed' }
+    );
+
+    await Item.findByIdAndUpdate(
+      booking.item._id, 
+      { status: 'available' }
+    );
+
+    res.json({ message: 'Item returned successfully.' });
+
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
 
