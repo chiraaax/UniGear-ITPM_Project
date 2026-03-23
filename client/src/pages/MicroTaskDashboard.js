@@ -28,7 +28,6 @@ const TaskDashboard = () => {
       console.error("Error fetching tasks:", error);
     }
   };
-  
 // Navigation to post task page
   const navigate = useNavigate();
   const handlePostTask = () => {
