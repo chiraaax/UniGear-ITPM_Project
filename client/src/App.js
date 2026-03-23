@@ -116,6 +116,7 @@ function App() {
             <Route path="/tasks" element={<TaskPage />} />
             <Route path="/me" element={<StatusDashboard />} />
             <Route path="/feedback" element={<Feedback />} />
+            <Route path="/tasks" element={<TaskPage />} />
           </Routes>
         </main>
         <footer className="border-t border-slate-800/70 bg-slate-950/80 py-3 text-center text-xs text-slate-500">
