@@ -7,6 +7,7 @@ import TaskPage from './pages/TaskPage';
 import AuthPage from './pages/AuthPage';
 import StatusDashboard from './pages/StatusDashboard';
 import { useAuth } from './context/AuthContext';
+import Feedback from './pages/Feedback';
 
 function App() {
   const { user, logout } = useAuth();
@@ -70,6 +71,16 @@ function App() {
                   My activity
                 </NavLink>
               )}
+              <NavLink
+                to="/feedback"
+                className={({ isActive }) =>
+                  `rounded-full px-3 py-1 transition ${
+                    isActive ? 'bg-slate-800 text-slate-50' : 'hover:bg-slate-800/60'
+                  }`
+                }
+              >
+                Feedback
+              </NavLink>
             </nav>
             <div className="flex items-center gap-2 text-xs md:text-sm">
               {user ? (
@@ -104,6 +115,7 @@ function App() {
             <Route path="/rentals" element={<RentalPage />} />
             <Route path="/tasks" element={<TaskPage />} />
             <Route path="/me" element={<StatusDashboard />} />
+            <Route path="/feedback" element={<Feedback />} />
           </Routes>
         </main>
         <footer className="border-t border-slate-800/70 bg-slate-950/80 py-3 text-center text-xs text-slate-500">
