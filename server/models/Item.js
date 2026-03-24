@@ -14,6 +14,11 @@ const itemSchema = new mongoose.Schema(
     dailyRate: { type: Number, required: true, min: 0 },
     blockedDates: [{ type: Date }],
     isActive: { type: Boolean, default: true },
+    status: {
+      type: String,
+      enum: ['available', 'booked'],
+      default: 'available',
+    },
   },
   { timestamps: true }
 );
