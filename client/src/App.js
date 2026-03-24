@@ -6,6 +6,7 @@ import RentalPage from './pages/RentalPage';
 import TaskPage from './pages/TaskPage';
 import AuthPage from './pages/AuthPage';
 import StatusDashboard from './pages/StatusDashboard';
+import FeedbackPage from './pages/FeedbackPage';
 import { useAuth } from './context/AuthContext';
 import MicroTaskDashboard  from './pages/MicroTaskDashboard';
 
@@ -59,6 +60,16 @@ function App() {
               >
                 Micro-tasks
               </NavLink>
+              <NavLink
+                to="/feedback"
+                className={({ isActive }) =>
+                  `rounded-full px-3 py-1 transition ${
+                    isActive ? 'bg-slate-800 text-slate-50' : 'hover:bg-slate-800/60'
+                  }`
+                }
+              >
+                Feedback
+              </NavLink>
               {user && (
                 <NavLink
                   to="/me"
@@ -106,6 +117,7 @@ function App() {
             <Route path="/tasks" element={<TaskPage />} />
             <Route path="/me" element={<StatusDashboard />} />
             <Route path="/micro-tasks" element={<MicroTaskDashboard />} />
+            <Route path="/feedback" element={<FeedbackPage />} />
           </Routes>
         </main>
         <footer className="border-t border-slate-800/70 bg-slate-950/80 py-3 text-center text-xs text-slate-500">
