@@ -86,9 +86,9 @@ const TaskDashboard = () => {
 
   const getStatusStyle = (status) => {
     switch (status) {
-      case "Open":
+      case "Pending":
         return "bg-yellow-400/80";
-      case "Assigned":
+      case "InProgress":
         return "bg-blue-400/80";
       case "Completed":
         return "bg-green-400/80";
@@ -136,8 +136,8 @@ const TaskDashboard = () => {
           onChange={(e) => setStatus(e.target.value)}
         >
           <option value="All">All Status</option>
-          <option value="Open">Open</option>
-          <option value="Assigned">Assigned</option>
+          <option value="Pending">Pending</option>
+          <option value="InProgress">In Progress</option>
           <option value="Completed">Completed</option>
           <option value="Cancelled">Cancelled</option>
         </select>
