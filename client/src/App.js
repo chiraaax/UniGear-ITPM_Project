@@ -8,6 +8,9 @@ import AuthPage from './pages/AuthPage';
 import StatusDashboard from './pages/StatusDashboard';
 import { useAuth } from './context/AuthContext';
 import MicroTaskDashboard  from './pages/MicroTaskDashboard';
+import TaskStatusDashboard from './pages/TaskStatusDashboard';
+import EditTask from './pages/EditTask';
+import EditItem from './pages/EditItem';
 
 function App() {
   const { user, logout } = useAuth();
@@ -106,6 +109,9 @@ function App() {
             <Route path="/tasks" element={<TaskPage />} />
             <Route path="/me" element={<StatusDashboard />} />
             <Route path="/micro-tasks" element={<MicroTaskDashboard />} />
+            <Route path="/status-tasks" element={<TaskStatusDashboard />} />
+            <Route path="/edit-task/:id" element={<EditTask />} />
+            <Route path="/edit-item/:id" element={<EditItem />} />
           </Routes>
         </main>
         <footer className="border-t border-slate-800/70 bg-slate-950/80 py-3 text-center text-xs text-slate-500">

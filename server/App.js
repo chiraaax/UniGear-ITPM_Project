@@ -3,6 +3,11 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const taskRoutes = require("./routes/taskRoutes");
+const tasks = require("./routes/tasks");
+const rentals = require("./routes/rentals");
+const transactions = require("./routes/transactions");
+const users = require("./routes/users");
+const authRoutes = require("./routes/auth");
 
 const app = express();
 
@@ -12,6 +17,11 @@ app.use(bodyParser.json());
 
 // Routes
 app.use("/api/tasks", taskRoutes);
+app.use("/api/tasks", tasks); // More complete task operations
+app.use("/api/rentals", rentals);
+app.use("/api/transactions", transactions);
+app.use("/api/users", users);
+app.use("/api/auth", authRoutes);
 
 // Connect to MongoDB
 mongoose

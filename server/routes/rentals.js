@@ -98,6 +98,32 @@ router.delete('/items/:id', auth, async (req, res, next) => {
   }
 });
 
+// UPDATE item (owner only)
+router.patch('/items/:id', auth, async (req, res, next) => {
+  try {
+    const item = await Item.findById(req.params.id);
+    if (!item) {
+      return res.status(404).json({ message: 'Item not found' });
+    }
+
+    if (!item.owner.equals(req.user._id)) {
+      return res.status(403).json({ message: 'You can only edit your own items.' });
+    }
+
+    const updatableFields = ['title', 'description', 'category', 'dailyRate'];
+    updatableFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        item[field] = req.body[field];
+      }
+    });
+
+    await item.save();
+    res.json(item);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // CREATE booking for an item
 router.post('/items/:id/bookings', auth, async (req, res, next) => {
   try {

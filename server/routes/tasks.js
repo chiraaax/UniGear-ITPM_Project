@@ -79,6 +79,31 @@ router.patch('/:id', auth, async (req, res, next) => {
   }
 });
 
+// DELETE task (only if no offers have been accepted)
+router.delete('/:id', auth, async (req, res, next) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    if (!task.creator.equals(req.user._id)) {
+      return res.status(403).json({ message: 'You can only delete your own tasks.' });
+    }
+
+    if (task.status !== 'Open') {
+      return res.status(400).json({
+        message: 'Task cannot be deleted once an offer has been accepted.',
+      });
+    }
+
+    await task.deleteOne();
+    res.json({ message: 'Task deleted successfully.' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // CREATE offer for a task
 router.post('/:id/offers', auth, async (req, res, next) => {
   try {

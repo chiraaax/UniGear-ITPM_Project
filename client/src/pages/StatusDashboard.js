@@ -14,7 +14,6 @@ const StatusDashboard = () => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const authHeaders = token
     ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
     : {};
@@ -30,6 +29,8 @@ const StatusDashboard = () => {
 
   const loadData = async () => {
     try {
+      const headers = { Authorization: `Bearer ${token}` };
+
       const [meRes, itemsRes, tasksRes, txRes] = await Promise.all([
         fetch(`${API_BASE}/users/me`, { headers }),
         fetch(`${API_BASE}/rentals/my-items`, { headers }),
@@ -48,14 +49,14 @@ const StatusDashboard = () => {
       setMyItems(Array.isArray(items) ? items : []);
       setMyTasks(Array.isArray(tasks) ? tasks : []);
       setTransactions(Array.isArray(txs) ? txs : []);
-    } catch (err) {
-      console.error(err);
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
     }
   };
 
-  // ================= ITEM FUNCTIONS =================
+  // ================= ITEM =================
   const handleDeleteItem = async (id) => {
     if (!window.confirm('Delete this item?')) return;
 
@@ -71,7 +72,7 @@ const StatusDashboard = () => {
     navigate(`/edit-item/${id}`);
   };
 
-  // ================= TASK FUNCTIONS =================
+  // ================= TASK =================
   const handleDeleteTask = async (id) => {
     if (!window.confirm('Delete this task?')) return;
 
@@ -87,7 +88,7 @@ const StatusDashboard = () => {
     navigate(`/edit-task/${id}`);
   };
 
-  // ================= TRANSACTION FUNCTIONS =================
+  // ================= TRANSACTIONS =================
   const handleConfirm = async (txId) => {
     await fetch(`${API_BASE}/transactions/${txId}/confirm`, {
       method: 'POST',
@@ -118,98 +119,139 @@ const StatusDashboard = () => {
   if (!user) return null;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <div className="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-10">
       
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl text-white font-bold">My Dashboard</h1>
+      <header className="mb-6 flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-50 md:text-3xl">
+            My UniGear activity
+          </h1>
+          <p className="text-sm text-slate-300">
+            Track your listings, tasks, and handovers.
+          </p>
+        </div>
 
+        {/* ADD BUTTONS */}
         <div className="flex gap-2">
           <button
-            className="bg-green-500 px-4 py-2 rounded text-white"
+            className="small-action bg-green-600"
             onClick={() => navigate('/add-item')}
           >
             + Add Item
           </button>
 
           <button
-            className="bg-blue-500 px-4 py-2 rounded text-white"
+            className="small-action bg-blue-600"
             onClick={() => navigate('/post-task')}
           >
             + Post Task
           </button>
         </div>
-      </div>
 
-      {loading && <p>Loading...</p>}
-
-      {/* ITEMS */}
-      <h2 className="text-white mt-4">My Items</h2>
-      <div className="grid gap-3">
-        {myItems.map((item) => (
-          <div key={item._id} className="bg-slate-800 p-3 rounded">
-            <h3 className="text-white">{item.title}</h3>
-            <p className="text-gray-300">LKR {item.dailyRate}</p>
-
-            <div className="flex gap-2 mt-2">
-              <button
-                className="bg-yellow-500 px-2 py-1 rounded"
-                onClick={() => handleEditItem(item._id)}
-              >
-                Edit
-              </button>
-
-              <button
-                className="bg-red-500 px-2 py-1 rounded"
-                onClick={() => handleDeleteItem(item._id)}
-              >
-                Delete
-              </button>
+        {profile && (
+          <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-700 px-3 py-2 text-xs">
+            <div>
+              <div className="text-slate-100">{profile.name}</div>
+              <div className="text-slate-400">{profile.email}</div>
+            </div>
+            <div className="ml-2 text-emerald-300">
+              {profile.trustScore?.toFixed(2)}
             </div>
           </div>
-        ))}
-      </div>
+        )}
+      </header>
 
-      {/* TASKS */}
-      <h2 className="text-white mt-6">My Tasks</h2>
-      <div className="grid gap-3">
-        {myTasks.map((task) => (
-          <div key={task._id} className="bg-slate-800 p-3 rounded">
-            <h3 className="text-white">{task.description}</h3>
-            <p className="text-gray-300">Budget: LKR {task.budget}</p>
+      {loading && <p className="text-slate-400">Loading...</p>}
 
-            <div className="flex gap-2 mt-2">
-              <button
-                className="bg-yellow-500 px-2 py-1 rounded"
-                onClick={() => handleEditTask(task._id)}
-              >
-                Edit
-              </button>
+      <div className="grid gap-6 md:grid-cols-2">
 
-              <button
-                className="bg-red-500 px-2 py-1 rounded"
-                onClick={() => handleDeleteTask(task._id)}
-              >
-                Delete
-              </button>
+        {/* ITEMS */}
+        <section>
+          <h2 className="text-slate-200">My rental listings</h2>
+
+          {myItems.map((item) => (
+            <div key={item._id} className="bg-slate-900 p-3 rounded mt-2">
+              <h3 className="text-white">{item.title}</h3>
+              <p className="text-gray-300">LKR {item.dailyRate}</p>
+
+              <div className="flex gap-2 mt-2">
+                <button
+                  className="small-action bg-yellow-600"
+                  onClick={() => handleEditItem(item._id)}
+                >
+                  Edit
+                </button>
+
+                <button
+                  className="small-action bg-red-600"
+                  onClick={() => handleDeleteItem(item._id)}
+                >
+                  Delete
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+
+          {myItems.length === 0 && (
+            <p className="text-slate-400">No items yet</p>
+          )}
+        </section>
+
+        {/* TASKS */}
+        <section>
+          <h2 className="text-slate-200">My tasks</h2>
+
+          {myTasks.map((task) => (
+            <div key={task._id} className="bg-slate-900 p-3 rounded mt-2">
+              <h3 className="text-white">{task.description}</h3>
+              <p className="text-gray-300">Budget: LKR {task.budget}</p>
+
+              <div className="flex gap-2 mt-2 flex-wrap">
+                <button
+                  className="small-action"
+                  onClick={() => navigate(`/tasks?task=${task._id}`)}
+                >
+                  View
+                </button>
+
+                <button
+                  className="small-action bg-yellow-600"
+                  onClick={() => handleEditTask(task._id)}
+                >
+                  Edit
+                </button>
+
+                <button
+                  className="small-action bg-red-600"
+                  onClick={() => handleDeleteTask(task._id)}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {myTasks.length === 0 && (
+            <p className="text-slate-400">No tasks yet</p>
+          )}
+        </section>
       </div>
 
       {/* TRANSACTIONS */}
-      <h2 className="text-white mt-6">Transactions</h2>
-      <div className="grid gap-3">
+      <section className="mt-6">
+        <h2 className="text-slate-200">Transactions</h2>
+
         {transactions.map((tx) => {
           const bothConfirmed = tx.ownerConfirmed && tx.counterpartyConfirmed;
 
           return (
-            <div key={tx._id} className="bg-slate-800 p-3 rounded">
+            <div key={tx._id} className="bg-slate-900 p-3 rounded mt-2">
               <p className="text-white">Status: {tx.status}</p>
 
               {!bothConfirmed && (
                 <button
-                  className="bg-blue-500 px-2 py-1 mt-2 rounded"
+                  className="small-action mt-2"
                   onClick={() => handleConfirm(tx._id)}
                 >
                   Confirm
@@ -218,7 +260,7 @@ const StatusDashboard = () => {
 
               {bothConfirmed && tx.status !== 'Completed' && (
                 <button
-                  className="bg-green-500 px-2 py-1 mt-2 rounded"
+                  className="small-action bg-green-600 mt-2"
                   onClick={() => handleMarkCompleted(tx)}
                 >
                   Complete
@@ -230,7 +272,7 @@ const StatusDashboard = () => {
                   {[1, 2, 3, 4, 5].map((r) => (
                     <button
                       key={r}
-                      className="bg-gray-600 px-2"
+                      className="small-action"
                       onClick={() => handleRate(tx._id, r)}
                     >
                       {r}
@@ -241,7 +283,11 @@ const StatusDashboard = () => {
             </div>
           );
         })}
-      </div>
+
+        {transactions.length === 0 && (
+          <p className="text-slate-400">No transactions yet</p>
+        )}
+      </section>
     </div>
   );
 };

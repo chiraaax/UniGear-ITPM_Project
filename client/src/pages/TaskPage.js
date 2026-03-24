@@ -14,6 +14,7 @@ const TaskPage = () => {
     budget: '',
     deadline: '',
     location: '',
+    category: '', // ✅ added
   });
 
   const fetchTasks = async () => {
@@ -63,12 +64,15 @@ const TaskPage = () => {
         return;
       }
 
+      // reset form
       setForm({
         description: '',
         budget: '',
         deadline: '',
         location: '',
+        category: '',
       });
+
       fetchTasks();
     } catch (err) {
       console.error(err);
@@ -83,9 +87,11 @@ const TaskPage = () => {
       </p>
 
       <div className="module-layout">
+        {/* FORM SECTION */}
         <section className="module-section">
           <h2>Post a New Task</h2>
           <form className="module-form" onSubmit={handleSubmit}>
+            
             <label>
               Description
               <textarea
@@ -95,6 +101,24 @@ const TaskPage = () => {
                 required
               />
             </label>
+
+            <label>
+              Category
+              <select
+                name="category"
+                value={form.category}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Select Category</option>
+                <option value="Delivery">Delivery</option>
+                <option value="Cleaning">Cleaning</option>
+                <option value="Academic">Academic</option>
+                <option value="Technical">Technical</option>
+                <option value="Other">Other</option>
+              </select>
+            </label>
+
             <label>
               Budget (LKR)
               <input
@@ -106,6 +130,7 @@ const TaskPage = () => {
                 required
               />
             </label>
+
             <label>
               Deadline
               <input
@@ -116,6 +141,7 @@ const TaskPage = () => {
                 required
               />
             </label>
+
             <label>
               Location
               <input
@@ -126,30 +152,46 @@ const TaskPage = () => {
                 required
               />
             </label>
+
             <button type="submit">Post Task</button>
           </form>
         </section>
 
+        {/* TASK LIST SECTION */}
         <section className="module-section">
           <h2>Live Job Board</h2>
           <div className="list-grid">
             {tasks.map((task) => (
               <div key={task._id} className="list-card">
                 <h3>{task.description}</h3>
+
+                <p className="muted">
+                  Category: {task.category || 'N/A'}
+                </p>
+
                 <p className="muted">
                   Budget: LKR {task.budget} · Deadline:{' '}
-                  {task.deadline ? new Date(task.deadline).toLocaleString() : 'N/A'}
+                  {task.deadline
+                    ? new Date(task.deadline).toLocaleString()
+                    : 'N/A'}
                 </p>
+
                 <p className="muted">Location: {task.location}</p>
+
                 <p className="tag status-tag">{task.status}</p>
+
                 {task.creator && (
                   <p className="muted small">
-                    Posted by: {task.creator.name} (Trust {task.creator.trustScore?.toFixed(1)})
+                    Posted by: {task.creator.name} (Trust{' '}
+                    {task.creator.trustScore?.toFixed(1)})
                   </p>
                 )}
               </div>
             ))}
-            {tasks.length === 0 && <p className="muted">No tasks on the board yet.</p>}
+
+            {tasks.length === 0 && (
+              <p className="muted">No tasks on the board yet.</p>
+            )}
           </div>
         </section>
       </div>
@@ -158,4 +200,3 @@ const TaskPage = () => {
 };
 
 export default TaskPage;
-
