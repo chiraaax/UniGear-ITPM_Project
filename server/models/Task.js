@@ -43,6 +43,11 @@ const taskSchema = new mongoose.Schema(
       enum: ['Pending', 'In Progress', 'Completed', 'Cancelled'],
       default: 'Pending'
     },
+
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
   },
   { timestamps: true }
 );

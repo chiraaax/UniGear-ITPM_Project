@@ -128,10 +128,10 @@ const TaskStatusTracking = () => {
             <div className="space-y-4">
               <div>
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-slate-300">Open</span>
+                  <span className="text-slate-300">Pending</span>
                   <span className="text-yellow-400 font-semibold">
                     {taskStats.total > 0
-                      ? Math.round((taskStats.open / taskStats.total) * 100)
+                      ? Math.round((taskStats.pending / taskStats.total) * 100)
                       : 0}
                     %
                   </span>
@@ -142,7 +142,7 @@ const TaskStatusTracking = () => {
                     style={{
                       width: `${
                         taskStats.total > 0
-                          ? (taskStats.open / taskStats.total) * 100
+                          ? (taskStats.pending / taskStats.total) * 100
                           : 0
                       }%`,
                     }}
@@ -152,10 +152,10 @@ const TaskStatusTracking = () => {
 
               <div>
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-slate-300">Assigned</span>
+                  <span className="text-slate-300">In Progress</span>
                   <span className="text-blue-400 font-semibold">
                     {taskStats.total > 0
-                      ? Math.round((taskStats.assigned / taskStats.total) * 100)
+                      ? Math.round((taskStats.inProgress / taskStats.total) * 100)
                       : 0}
                     %
                   </span>
@@ -166,7 +166,7 @@ const TaskStatusTracking = () => {
                     style={{
                       width: `${
                         taskStats.total > 0
-                          ? (taskStats.assigned / taskStats.total) * 100
+                          ? (taskStats.inProgress / taskStats.total) * 100
                           : 0
                       }%`,
                     }}

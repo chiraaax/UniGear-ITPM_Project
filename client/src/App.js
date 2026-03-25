@@ -13,6 +13,7 @@ import TaskStatusDashboard from './pages/TaskStatusDashboard';
 import EditTask from './pages/EditTask';
 import EditItem from './pages/EditItem';
 import TaskStatusTracking from './pages/TaskStatusTracking';
+import TaskDetail from './pages/TaskDetail';
 
 function App() {
   const { user, logout } = useAuth();
@@ -135,6 +136,7 @@ function App() {
             <Route path="/micro-tasks" element={<MicroTaskDashboard />} />
             <Route path="/status-tasks" element={<TaskStatusDashboard />} />
             <Route path="/task-tracking" element={<TaskStatusTracking />} />
+            <Route path="/task/:id" element={<TaskDetail />} />
             <Route path="/edit-task/:id" element={<EditTask />} />
             <Route path="/edit-item/:id" element={<EditItem />} />
             <Route path="/feedback" element={<FeedbackPage />} />
