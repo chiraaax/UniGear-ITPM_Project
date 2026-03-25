@@ -14,6 +14,7 @@ const EditTask = () => {
     budget: '',
     deadline: '',
     location: '',
+    category: '',
   });
   const [loading, setLoading] = useState(true);
 
@@ -36,6 +37,7 @@ const EditTask = () => {
             budget: task.budget || '',
             deadline: task.deadline ? new Date(task.deadline).toISOString().slice(0, 16) : '',
             location: task.location || '',
+            category: task.category || '',
           });
         }
         setLoading(false);
@@ -92,6 +94,23 @@ const EditTask = () => {
             onChange={handleChange}
             required
           />
+        </label>
+
+        <label>
+          Category
+          <select
+            name="category"
+            value={form.category}
+            onChange={handleChange}
+            required
+          >
+            <option value="">Select Category</option>
+            <option value="Delivery">Delivery</option>
+            <option value="Cleaning">Cleaning</option>
+            <option value="Academic">Academic</option>
+            <option value="Technical">Technical</option>
+            <option value="Other">Other</option>
+          </select>
         </label>
 
         <label>

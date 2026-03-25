@@ -12,6 +12,7 @@ import MicroTaskDashboard  from './pages/MicroTaskDashboard';
 import TaskStatusDashboard from './pages/TaskStatusDashboard';
 import EditTask from './pages/EditTask';
 import EditItem from './pages/EditItem';
+import TaskStatusTracking from './pages/TaskStatusTracking';
 
 function App() {
   const { user, logout } = useAuth();
@@ -85,6 +86,18 @@ function App() {
                   My activity
                 </NavLink>
               )}
+              {user && (
+                <NavLink
+                  to="/task-tracking"
+                  className={({ isActive }) =>
+                    `rounded-full px-3 py-1 transition ${
+                      isActive ? 'bg-slate-800 text-slate-50' : 'hover:bg-slate-800/60'
+                    }`
+                  }
+                >
+                  Task Status
+                </NavLink>
+              )}
             </nav>
             <div className="flex items-center gap-2 text-xs md:text-sm">
               {user ? (
@@ -121,6 +134,7 @@ function App() {
             <Route path="/me" element={<StatusDashboard />} />
             <Route path="/micro-tasks" element={<MicroTaskDashboard />} />
             <Route path="/status-tasks" element={<TaskStatusDashboard />} />
+            <Route path="/task-tracking" element={<TaskStatusTracking />} />
             <Route path="/edit-task/:id" element={<EditTask />} />
             <Route path="/edit-item/:id" element={<EditItem />} />
             <Route path="/feedback" element={<FeedbackPage />} />

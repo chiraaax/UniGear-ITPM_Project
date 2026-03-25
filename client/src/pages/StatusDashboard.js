@@ -13,10 +13,16 @@ const StatusDashboard = () => {
   const [myTasks, setMyTasks] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [notification, setNotification] = useState(null);
 
   const authHeaders = token
     ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
     : {};
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   useEffect(() => {
     if (!token) {
@@ -60,12 +66,20 @@ const StatusDashboard = () => {
   const handleDeleteItem = async (id) => {
     if (!window.confirm('Delete this item?')) return;
 
-    await fetch(`${API_BASE}/rentals/${id}`, {
-      method: 'DELETE',
-      headers: authHeaders,
-    });
+    try {
+      const res = await fetch(`${API_BASE}/rentals/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
 
-    setMyItems((prev) => prev.filter((i) => i._id !== id));
+      if (!res.ok) throw new Error('Failed to delete item');
+
+      setMyItems((prev) => prev.filter((i) => i._id !== id));
+      showNotification('✅ Item deleted successfully', 'success');
+    } catch (error) {
+      console.error('Delete error:', error);
+      showNotification('❌ Failed to delete item', 'error');
+    }
   };
 
   const handleEditItem = (id) => {
@@ -76,19 +90,27 @@ const StatusDashboard = () => {
   const handleDeleteTask = async (id) => {
     if (!window.confirm('Delete this task?')) return;
 
-    await fetch(`${API_BASE}/tasks/${id}`, {
-      method: 'DELETE',
-      headers: authHeaders,
-    });
+    try {
+      const res = await fetch(`${API_BASE}/tasks/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
 
-    setMyTasks((prev) => prev.filter((t) => t._id !== id));
+      if (!res.ok) throw new Error('Failed to delete task');
+
+      setMyTasks((prev) => prev.filter((t) => t._id !== id));
+      showNotification('✅ Task deleted successfully', 'success');
+    } catch (error) {
+      console.error('Delete error:', error);
+      showNotification('❌ Failed to delete task', 'error');
+    }
   };
 
   const handleEditTask = (id) => {
     navigate(`/edit-task/${id}`);
   };
 
-  // ================= TRANSACTIONS =================
+  // TRANSACTIONS 
   const handleConfirm = async (txId) => {
     await fetch(`${API_BASE}/transactions/${txId}/confirm`, {
       method: 'POST',
@@ -120,6 +142,17 @@ const StatusDashboard = () => {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-10">
+      
+      {/* NOTIFICATION TOAST */}
+      {notification && (
+        <div className={`fixed top-4 right-4 px-6 py-3 rounded-lg text-white font-semibold shadow-lg z-50 animate-pulse ${
+          notification.type === 'success' 
+            ? 'bg-green-500' 
+            : 'bg-red-500'
+        }`}>
+          {notification.message}
+        </div>
+      )}
       
       {/* HEADER */}
       <header className="mb-6 flex items-center justify-between gap-3">

@@ -1,95 +1,99 @@
 const Task = require("../models/Task");
 
-// Get all tasks
-exports.getTasks = async (req, res) => {
-  try {
-    const { search, category, status } = req.query;
-    let query = {};
-
-    // Search filter - search in description
-    if (search) {
-      query.description = { $regex: search, $options: 'i' }; // case-insensitive search
-    }
-
-    // Category filter
-    if (category && category !== 'All') {
-      query.category = category;
-    }
-
-    // Status filter - map frontend values to backend enum values
-    if (status && status !== 'All') {
-      const statusMapping = {
-        'pending': 'Open',
-        'inprogress': 'Assigned',
-        'completed': 'Completed'
-      };
-      query.status = statusMapping[status] || status;
-    }
-
-    const tasks = await Task.find(query).populate('creator', 'name trustScore');
-    res.json(tasks);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// Create new task
+// ================= CREATE TASK =================
 exports.createTask = async (req, res) => {
   try {
     const { description, category, budget, deadline, location } = req.body;
-    const creator = req.user?._id; // Get user ID from authenticated request
-    
+
+    const creator = req.user?._id;
+
+    // 🔥 VALIDATION FIX
     if (!creator) {
       return res.status(401).json({ message: 'User not authenticated' });
     }
-    
-    const task = new Task({ 
+
+    if (!category || category.trim() === "") {
+      return res.status(400).json({ message: 'Category is required' });
+    }
+
+    if (!description || !budget || !deadline || !location) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    const task = new Task({
       creator,
-      description, 
-      category,
+      description,
+      category: category.trim(), // ✅ CLEAN VALUE
       budget,
       deadline,
-      location
+      location,
     });
+
     await task.save();
-    // Populate creator data before responding
     await task.populate('creator', 'name trustScore');
+
     res.status(201).json(task);
+
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 };
 
-// Accept task
-exports.acceptTask = async (req, res) => {
+// ================= DELETE TASK =================
+exports.deleteTask = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { user } = req.body;
-    const task = await Task.findByIdAndUpdate(
-      id,
-      { assignedTo: user },
-      { new: true }
-    );
-    res.json(task);
+    const task = await Task.findById(req.params.id);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    if (!task.creator.equals(req.user._id)) {
+      return res.status(403).json({ message: 'You can only delete your own tasks.' });
+    }
+
+    if (task.status !== 'Open') {
+      return res.status(400).json({ message: 'Task cannot be deleted once it is not open.' });
+    }
+
+    await task.deleteOne();
+    res.json({ message: 'Task deleted successfully.' });
   } catch (err) {
+    console.error('Delete operation failed:', err);
     res.status(500).json({ error: err.message });
   }
 };
 
-// Update task status
-exports.updateStatus = async (req, res) => {
+// Update task details
+// ================= UPDATE TASK =================
+exports.updateTask = async (req, res) => {
   try {
-    const { id } = req.params;
-    const task = await Task.findById(id);
-    if (!task) return res.status(404).json({ message: "Task not found" });
+    const { description, category, budget, deadline, location } = req.body;
 
-    // Update status workflow
-    if (task.status === "Pending") task.status = "In Progress";
-    else if (task.status === "In Progress") task.status = "Completed & Confirmed";
+    const task = await Task.findById(req.params.id);
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // 🔒 Ensure only owner can edit
+    if (task.creator.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    // ✅ UPDATE FIELDS
+    task.description = description || task.description;
+    task.category = category || task.category;
+    task.budget = budget || task.budget;
+    task.deadline = deadline || task.deadline;
+    task.location = location || task.location;
 
     await task.save();
+
     res.json(task);
+
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ message: 'Failed to update task' });
   }
 };

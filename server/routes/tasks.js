@@ -5,22 +5,35 @@ const Transaction = require('../models/Transaction');
 const Notification = require('../models/Notification');
 const auth = require('../middleware/auth');
 const requireMinTrustScore = require('../middleware/trustCheck');
+const { deleteTask } = require('../controllers/taskController');
 
 const router = express.Router();
+<Route path="/edit-task/:id" element={<EditTask />} />
+router.put('/:id', auth, updateTask);
 
 // CREATE task (subject to TrustScore rule)
 router.post('/', auth, requireMinTrustScore(2.0), async (req, res, next) => {
   try {
-    const { description, budget, deadline, location } = req.body;
+    console.log('Received task data:', req.body); // Debug log
+    const { description, budget, deadline, location, category } = req.body;
+    console.log('Extracted category:', category); // Debug log
+
+    // Validate required fields
+    if (!category || category.trim() === '') {
+      return res.status(400).json({ message: 'Category is required' });
+    }
+
     const task = await Task.create({
       creator: req.user._id,
-      description,
+      description: description.trim(),
       budget,
       deadline,
-      location,
+      location: location.trim(),
+      category: category.trim(),
     });
     res.status(201).json(task);
   } catch (err) {
+    console.error('Task creation error:', err.message); // Debug log
     next(err);
   }
 });
@@ -28,7 +41,27 @@ router.post('/', auth, requireMinTrustScore(2.0), async (req, res, next) => {
 // LIST tasks for job board
 router.get('/', async (req, res, next) => {
   try {
-    const tasks = await Task.find().sort({ createdAt: -1 }).populate('creator', 'name trustScore');
+    const { search, category, status } = req.query;
+    let query = {};
+
+    if (search) {
+      query.description = { $regex: search, $options: 'i' };
+    }
+
+    if (category && category !== 'All') {
+      query.category = category;
+    }
+
+    if (status && status !== 'All') {
+      const statusMapping = {
+        pending: 'Open',
+        inprogress: 'Assigned',
+        completed: 'Completed',
+      };
+      query.status = statusMapping[status] || status;
+    }
+
+    const tasks = await Task.find(query).sort({ createdAt: -1 }).populate('creator', 'name trustScore');
     res.json(tasks);
   } catch (err) {
     next(err);
@@ -65,7 +98,7 @@ router.patch('/:id', auth, async (req, res, next) => {
       });
     }
 
-    const updatableFields = ['description', 'budget', 'deadline', 'location'];
+    const updatableFields = ['description', 'budget', 'deadline', 'location', 'category'];
     updatableFields.forEach((field) => {
       if (req.body[field] !== undefined) {
         task[field] = req.body[field];
@@ -158,6 +191,8 @@ router.get('/:id/offers', auth, async (req, res, next) => {
     next(err);
   }
 });
+
+router.delete('/:id', auth, deleteTask);
 
 // ACCEPT offer for a task -> move task to Assigned and create transaction
 router.post('/:taskId/offers/:offerId/accept', auth, async (req, res, next) => {

@@ -1,125 +1,78 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000/api";
+const API_BASE = "http://localhost:5000/api";
 
 const TaskDashboard = () => {
-  const { token, user } = useAuth();
   const [tasks, setTasks] = useState([]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [status, setStatus] = useState("All");
-  const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
-  const authHeaders = token
-    ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
-    : {};
+
+  // ================= FETCH TASKS =================
   const fetchTasks = async () => {
     try {
-      setLoading(true);
-      let query = [];
+      let query = new URLSearchParams();
 
-      if (search) query.push(`search=${encodeURIComponent(search)}`);
-      if (category !== "All") query.push(`category=${encodeURIComponent(category)}`);
-      if (status !== "All") query.push(`status=${encodeURIComponent(status)}`);
+      if (search.trim()) query.append("search", search.trim());
+      if (category !== "All") query.append("category", category);
+      if (status !== "All") query.append("status", status);
 
-      const queryString = query.length ? `?${query.join("&")}` : "";
+      const url = `${API_BASE}/tasks${query.toString() ? `?${query.toString()}` : ""}`;
 
-      const res = await fetch(`${API_BASE}/tasks${queryString}`);
-      if (!res.ok) {
-        throw new Error(`Server returned status ${res.status}`);
-      }
-
-      const contentType = res.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await res.text();
-        throw new Error(`Expected JSON, got ${contentType || 'unknown'}:\n${text.substring(0, 300)}`);
-      }
-
+      const res = await fetch(url);
       const data = await res.json();
+
       setTasks(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('Error fetching tasks:', error);
-      setTasks([]);
-    } finally {
-      setLoading(false);
+      console.error("Error fetching tasks:", error);
     }
   };
 
+  // ================= LOAD =================
   useEffect(() => {
     fetchTasks();
   }, [search, category, status]);
 
+  // ================= NAVIGATION =================
   const handlePostTask = () => {
-    if (!token) return navigate("/auth");
-    navigate("/tasks");
+    navigate("/tasks"); // Navigate to TaskPage
   };
 
-  const handleEditTask = (id) => {
-    if (!token) return navigate("/auth");
-    navigate(`/edit-task/${id}`);
-  };
-
-  const handleDeleteTask = async (id) => {
-    if (!token) return navigate("/auth");
-    if (!window.confirm("Delete this task?")) return;
-
-    try {
-      const res = await fetch(`${API_BASE}/tasks/${id}`, {
-        method: "DELETE",
-        headers: authHeaders,
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Failed to delete task");
-      }
-
-      setTasks((prev) => prev.filter((t) => t._id !== id));
-    } catch (error) {
-      console.error("Delete task failed:", error);
-      alert(error.message || "Could not delete task");
-    }
-  };
-
+  // ================= STATUS STYLE =================
   const getStatusStyle = (status) => {
-    switch (status) {
-      case "Pending":
-        return "bg-yellow-400/80";
-      case "InProgress":
-        return "bg-blue-400/80";
-      case "Completed":
-        return "bg-green-400/80";
-      case "Cancelled":
-        return "bg-red-400/80";
+    switch (status?.toLowerCase()) {
+      case "pending":
+        return "bg-yellow-500";
+      case "inprogress":
+        return "bg-blue-500";
+      case "completed":
+        return "bg-green-500";
       default:
         return "bg-gray-400";
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0b1c2c] via-[#0e2a3d] to-[#071521] text-white p-6">
-      
-      {/* Title */}
-      <h1 className="text-3xl font-bold mb-6 tracking-wide">
-        🚀 Task Dashboard
-      </h1>
+    <div className="p-5 font-sans">
+      <h1 className="text-2xl font-bold mb-4">Task Dashboard</h1>
 
-      {/* Controls */}
-      <div className="flex flex-wrap gap-4 mb-6">
-        
+      {/* CONTROLS */}
+      <div className="flex flex-wrap gap-3 mb-5">
+        {/* SEARCH */}
         <input
           type="text"
           placeholder="Search tasks..."
-          className="px-4 py-2 rounded-lg bg-white/10 backdrop-blur border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="px-3 py-2 border rounded-md w-48"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
 
+        {/* CATEGORY */}
         <select
-          className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 backdrop-blur text-gray-300"
+          className="px-3 py-2 border rounded-md bg-gray-500 text-white"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         >
@@ -128,66 +81,55 @@ const TaskDashboard = () => {
           <option value="Cleaning">Cleaning</option>
           <option value="Academic">Academic</option>
           <option value="Technical">Technical</option>
+          <option value="Other">Other</option>
         </select>
 
+        {/* STATUS */}
         <select
-          className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 backdrop-blur text-gray-300"
+          className="px-3 py-2 border rounded-md bg-gray-500 text-white"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
         >
           <option value="All">All Status</option>
-          <option value="Pending">Pending</option>
-          <option value="InProgress">In Progress</option>
-          <option value="Completed">Completed</option>
-          <option value="Cancelled">Cancelled</option>
+          <option value="pending">Pending</option>
+          <option value="inprogress">In Progress</option>
+          <option value="completed">Completed</option>
         </select>
 
+        {/* POST BUTTON */}
         <button
           onClick={handlePostTask}
-          className="bg-gradient-to-r from-green-400 to-emerald-500 px-5 py-2 rounded-lg font-semibold shadow-lg hover:scale-105 transition"
+          className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
         >
           + Post Task
         </button>
       </div>
 
-      {/* Loading */}
-      {loading && <p className="text-gray-300">Loading tasks...</p>}
-
-      {/* Cards */}
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-5">
+      {/* TASK CARDS */}
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
         {tasks.length > 0 ? (
           tasks.map((task) => (
             <div
               key={task._id}
-              className="p-5 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 shadow-lg hover:shadow-xl hover:scale-[1.02] transition"
+              className="p-4 rounded-xl bg-gray-500 shadow hover:shadow-lg transition"
             >
-              <h3 className="text-lg font-semibold mb-2">
-                {task.description}
-              </h3>
+              <h3 className="font-semibold text-lg">{task.description}</h3>
 
-              <p className="text-sm text-gray-200">💰 LKR {task.budget}</p>
-              <p className="text-sm text-gray-200">📍 {task.location}</p>
-              <p className="text-sm text-gray-200">📂 {task.category || "N/A"}</p>
+              <p className="text-sm text-black">💰 LKR {task.budget}</p>
+              <p className="text-sm text-black">📍 {task.location}</p>
+              <p className="text-sm text-black">📂 {task.category}</p>
 
               <span
-                className={`inline-block mt-3 px-3 py-1 text-xs rounded-full text-black font-semibold ${getStatusStyle(
-                  task.status
+                className={`inline-block mt-2 px-2 py-1 text-white text-xs rounded ${getStatusStyle(
+                  task.status,
                 )}`}
               >
                 {task.status}
               </span>
-
-              {task.creator && (
-                <p className="text-xs text-gray-300 mt-3">
-                  Posted by: {task.creator.name} ⭐{" "}
-                  {task.creator.trustScore?.toFixed(1) || "—"}
-                </p>
-              )}
-
             </div>
           ))
         ) : (
-          !loading && <p className="text-gray-400">No tasks found.</p>
+          <p className="text-gray-500">No tasks found.</p>
         )}
       </div>
     </div>

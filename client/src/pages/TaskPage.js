@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
+const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000/api";
 
 const TaskPage = () => {
   const { token } = useAuth();
@@ -10,11 +10,11 @@ const TaskPage = () => {
 
   const [tasks, setTasks] = useState([]);
   const [form, setForm] = useState({
-    description: '',
-    budget: '',
-    deadline: '',
-    location: '',
-    category: '', // ✅ added
+    description: "",
+    budget: "",
+    deadline: "",
+    location: "",
+    category: "", // ✅ added
   });
 
   const fetchTasks = async () => {
@@ -40,16 +40,22 @@ const TaskPage = () => {
     e.preventDefault();
 
     if (!token) {
-      alert('Please sign in to post a task.');
-      navigate('/auth');
+      alert("Please sign in to post a task.");
+      navigate("/auth");
+      return;
+    }
+
+    // Validate category is selected
+    if (!form.category || form.category === "") {
+      alert("Please select a category for your task.");
       return;
     }
 
     try {
       const res = await fetch(`${API_BASE}/tasks`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -60,17 +66,23 @@ const TaskPage = () => {
 
       if (!res.ok) {
         const error = await res.json();
-        alert(error.message || 'Failed to post task');
+        alert(error.message || "Failed to post task");
         return;
       }
 
+      JSON.stringify({
+        ...form,
+        category: form.category.trim(),
+        budget: Number(form.budget),
+      });
+
       // reset form
       setForm({
-        description: '',
-        budget: '',
-        deadline: '',
-        location: '',
-        category: '',
+        description: "",
+        budget: "",
+        deadline: "",
+        location: "",
+        category: "",
       });
 
       fetchTasks();
@@ -83,7 +95,8 @@ const TaskPage = () => {
     <div className="module-page-container">
       <h1>UniGear Micro-task System</h1>
       <p className="module-description">
-        Post one-off errands or browse the live job board to pick up tasks and earn on campus.
+        Post one-off errands or browse the live job board to pick up tasks and
+        earn on campus.
       </p>
 
       <div className="module-layout">
@@ -91,7 +104,6 @@ const TaskPage = () => {
         <section className="module-section">
           <h2>Post a New Task</h2>
           <form className="module-form" onSubmit={handleSubmit}>
-            
             <label>
               Description
               <textarea
@@ -165,15 +177,13 @@ const TaskPage = () => {
               <div key={task._id} className="list-card">
                 <h3>{task.description}</h3>
 
-                <p className="muted">
-                  Category: {task.category || 'N/A'}
-                </p>
+                <p className="muted">Category: {task.category || "N/A"}</p>
 
                 <p className="muted">
-                  Budget: LKR {task.budget} · Deadline:{' '}
+                  Budget: LKR {task.budget} · Deadline:{" "}
                   {task.deadline
                     ? new Date(task.deadline).toLocaleString()
-                    : 'N/A'}
+                    : "N/A"}
                 </p>
 
                 <p className="muted">Location: {task.location}</p>
@@ -182,7 +192,7 @@ const TaskPage = () => {
 
                 {task.creator && (
                   <p className="muted small">
-                    Posted by: {task.creator.name} (Trust{' '}
+                    Posted by: {task.creator.name} (Trust{" "}
                     {task.creator.trustScore?.toFixed(1)})
                   </p>
                 )}
