@@ -64,6 +64,36 @@ exports.deleteTask = async (req, res) => {
   }
 };
 
+// ================= UPDATE TASK STATUS =================
+exports.updateStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const task = await Task.findById(id);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Map frontend status to backend status
+    const statusMapping = {
+      'Pending': 'Pending',
+      'In Progress': 'In Progress',
+      'Completed': 'Completed',
+      'Cancelled': 'Cancelled'
+    };
+
+    const backendStatus = statusMapping[status] || status;
+    task.status = backendStatus;
+
+    await task.save();
+    res.json(task);
+  } catch (err) {
+    console.error('Status update failed:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // Update task details
 // ================= UPDATE TASK =================
 exports.updateTask = async (req, res) => {

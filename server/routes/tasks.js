@@ -8,8 +8,6 @@ const requireMinTrustScore = require('../middleware/trustCheck');
 const { deleteTask } = require('../controllers/taskController');
 
 const router = express.Router();
-<Route path="/edit-task/:id" element={<EditTask />} />
-router.put('/:id', auth, updateTask);
 
 // CREATE task (subject to TrustScore rule)
 router.post('/', auth, requireMinTrustScore(2.0), async (req, res, next) => {
@@ -54,9 +52,10 @@ router.get('/', async (req, res, next) => {
 
     if (status && status !== 'All') {
       const statusMapping = {
-        pending: 'Open',
-        inprogress: 'Assigned',
+        pending: 'Pending',
+        inprogress: 'In Progress',
         completed: 'Completed',
+        cancelled: 'Cancelled',
       };
       query.status = statusMapping[status] || status;
     }
@@ -91,8 +90,8 @@ router.patch('/:id', auth, async (req, res, next) => {
     if (!task.creator.equals(req.user._id)) {
       return res.status(403).json({ message: 'You can only edit your own tasks.' });
     }
-
-    if (task.status !== 'Open') {
+console.log('Current task status:', task.status); // Debug log
+    if (task.status !== 'Pending') {
       return res.status(400).json({
         message: 'Task cannot be edited once an offer has been accepted.',
       });
@@ -124,7 +123,7 @@ router.delete('/:id', auth, async (req, res, next) => {
       return res.status(403).json({ message: 'You can only delete your own tasks.' });
     }
 
-    if (task.status !== 'Open') {
+    if (task.status !== 'Pending') {
       return res.status(400).json({
         message: 'Task cannot be deleted once an offer has been accepted.',
       });
@@ -146,7 +145,7 @@ router.post('/:id/offers', auth, async (req, res, next) => {
       return res.status(404).json({ message: 'Task not found' });
     }
 
-    if (task.status !== 'Open') {
+    if (task.status !== 'Pending') {
       return res.status(400).json({ message: 'Task is not open for new offers.' });
     }
 
@@ -194,6 +193,36 @@ router.get('/:id/offers', auth, async (req, res, next) => {
 
 router.delete('/:id', auth, deleteTask);
 
+// UPDATE TASK STATUS
+router.put('/status/:id', auth, async (req, res, next) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Check if user can update this task (for now, allow anyone, but in real app might restrict)
+    const { status } = req.body;
+
+    // Map frontend status to backend status
+    const statusMapping = {
+      'Pending': 'Pending',
+      'In Progress': 'In Progress',
+      'Completed': 'Completed',
+      'Cancelled': 'Cancelled'
+    };
+
+    const backendStatus = statusMapping[status] || status;
+    task.status = backendStatus;
+
+    await task.save();
+    res.json(task);
+  } catch (err) {
+    console.error('Status update failed:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ACCEPT offer for a task -> move task to Assigned and create transaction
 router.post('/:taskId/offers/:offerId/accept', auth, async (req, res, next) => {
   try {
@@ -206,7 +235,7 @@ router.post('/:taskId/offers/:offerId/accept', auth, async (req, res, next) => {
       return res.status(403).json({ message: 'You can only accept offers on your own tasks.' });
     }
 
-    if (task.status !== 'Open') {
+    if (task.status !== 'Pending') {
       return res.status(400).json({ message: 'Task is not open.' });
     }
 
@@ -222,7 +251,7 @@ router.post('/:taskId/offers/:offerId/accept', auth, async (req, res, next) => {
     offer.status = 'accepted';
     await offer.save();
 
-    task.status = 'Assigned';
+    task.status = 'In Progress';
     await task.save();
 
     const transaction = await Transaction.create({

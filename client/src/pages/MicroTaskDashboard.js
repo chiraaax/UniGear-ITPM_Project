@@ -126,6 +126,14 @@ const TaskDashboard = () => {
               >
                 {task.status}
               </span>
+
+              {/* VIEW BUTTON */}
+              <button
+                className="mt-3 bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
+                onClick={() => navigate(`/task/${task._id}`)}
+              >
+                View Task
+              </button>
             </div>
           ))
         ) : (
