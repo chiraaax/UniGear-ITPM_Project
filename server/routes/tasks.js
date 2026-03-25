@@ -5,7 +5,7 @@ const Transaction = require('../models/Transaction');
 const Notification = require('../models/Notification');
 const auth = require('../middleware/auth');
 const requireMinTrustScore = require('../middleware/trustCheck');
-const { deleteTask } = require('../controllers/taskController');
+const { deleteTask, getTaskById, acceptTask, updateStatus } = require('../controllers/taskController');
 
 const router = express.Router();
 
@@ -268,6 +268,16 @@ router.post('/:taskId/offers/:offerId/accept', auth, async (req, res, next) => {
     next(err);
   }
 });
+
+// 🔹 Get single task
+router.get('/:id', getTaskById);
+
+// 🔹 Accept task
+router.patch('/:id/accept', auth, acceptTask);
+
+// 🔹 Update task status
+router.put('/status/:id', auth, updateStatus);
+
 
 module.exports = router;
 

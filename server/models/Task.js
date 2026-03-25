@@ -13,7 +13,7 @@ const taskSchema = new mongoose.Schema(
       required: true
     },
 
-    // 🔥 FIXED CATEGORY
+    //  FIXED CATEGORY
     category: {
       type: String,
       required: true,
@@ -42,6 +42,11 @@ const taskSchema = new mongoose.Schema(
       type: String,
       enum: ['Pending', 'In Progress', 'Completed', 'Cancelled'],
       default: 'Pending'
+    },
+
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
     },
   },
   { timestamps: true }

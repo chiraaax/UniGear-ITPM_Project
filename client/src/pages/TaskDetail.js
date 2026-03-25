@@ -18,20 +18,16 @@ const TaskDetail = () => {
     fetchTask();
   }, [id]);
 
-  // ✅ Fetch task (using list method)
+  // ✅ Fetch task (using single task endpoint)
   const fetchTask = async () => {
     try {
       setLoading(true);
 
-      const res = await fetch(`${API_BASE}/tasks`);
-      if (!res.ok) throw new Error('Failed to fetch tasks');
+      const res = await fetch(`${API_BASE}/tasks/${id}`);
+      if (!res.ok) throw new Error('Failed to fetch task');
 
-      const tasks = await res.json();
-      const foundTask = tasks.find(t => t._id === id);
-
-      if (!foundTask) throw new Error('Task not found');
-
-      setTask(foundTask);
+      const task = await res.json();
+      setTask(task);
     } catch (err) {
       console.error(err);
       setError(err.message);
@@ -40,45 +36,40 @@ const TaskDetail = () => {
     }
   };
 
-  // ✅ Accept Task → change status
-  const handleAcceptTask = async () => {
-    if (!token) {
-      alert('Please sign in first');
-      navigate('/auth');
+ // ✅ Accept Task
+const handleAcceptTask = async () => {
+  if (!token) {
+    alert('Please login');
+    return;
+  }
+
+  try {
+    setAccepting(true);
+
+    const res = await fetch(`${API_BASE}/tasks/${task._id}/accept`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.message || 'Failed to accept task');
       return;
     }
 
-    if (!window.confirm('Do you want to accept this task?')) return;
+    // ✅ IMPORTANT: update UI from backend response
+    setTask(data);
 
-    try {
-      setAccepting(true);
-
-      const res = await fetch(`${API_BASE}/tasks/status/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: 'In Progress' }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || 'Failed to update task');
-      }
-
-      // ✅ Update UI instantly
-      setTask(prev => ({ ...prev, status: 'In Progress' }));
-
-      alert('✅ Task accepted! Status updated to In Progress');
-    } catch (err) {
-      console.error(err);
-      alert(err.message);
-    } finally {
-      setAccepting(false);
-    }
-  };
+  } catch (err) {
+    console.error(err);
+    alert('Error accepting task');
+  } finally {
+    setAccepting(false);
+  }
+};
 
   // ✅ Status color styles
   const getStatusStyle = (status) => {
@@ -100,7 +91,7 @@ const TaskDetail = () => {
   if (!task) return <div className="p-6 text-center">Task not found</div>;
 
   const isCreator = user && task.creator && user._id === task.creator._id;
-  const canAccept = !isCreator && task.status === 'Pending';
+  const canAccept = true && task.status === 'Pending';
 
   return (
     <div className="max-w-2xl mx-auto p-6 ">
@@ -174,7 +165,7 @@ const TaskDetail = () => {
             <button
               onClick={handleAcceptTask}
               disabled={accepting || task.status === 'In Progress'}
-              className="bg-green-500 text-black px-5 py-2 rounded hover:bg-green-600 disabled:opacity-50"
+              className="bg-green-500 text-white px-5 py-2 rounded hover:bg-green-600 disabled:opacity-50"
             > Accept Task
               {accepting
                 ? 'Accepting...'

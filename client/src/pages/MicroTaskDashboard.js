@@ -21,7 +21,6 @@ const TaskDashboard = () => {
       if (status !== "All") query.append("status", status);
 
       const url = `${API_BASE}/tasks${query.toString() ? `?${query.toString()}` : ""}`;
-
       const res = await fetch(url);
       const data = await res.json();
 
@@ -31,23 +30,20 @@ const TaskDashboard = () => {
     }
   };
 
-  // ================= LOAD =================
   useEffect(() => {
     fetchTasks();
   }, [search, category, status]);
 
-  // ================= NAVIGATION =================
   const handlePostTask = () => {
-    navigate("/tasks"); // Navigate to TaskPage
+    navigate("/tasks");
   };
 
-  // ================= STATUS STYLE =================
   const getStatusStyle = (status) => {
     switch (status?.toLowerCase()) {
       case "pending":
-        return "bg-yellow-500";
+        return "bg-yellow-600";
       case "inprogress":
-        return "bg-blue-500";
+        return "bg-blue-700";
       case "completed":
         return "bg-green-500";
       default:
@@ -56,23 +52,36 @@ const TaskDashboard = () => {
   };
 
   return (
-    <div className="p-5 font-sans">
-      <h1 className="text-2xl font-bold mb-4">Task Dashboard</h1>
+    <div className="min-h-screen bg-gradient-to-br from-[#0b1a2a] to-[#0f2a44] text-white p-6  ">
+
+      {/* HERO SECTION */}
+      <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-10 md:py-12">
+        <p className="text-sm tracking-widest text-blue-300 mb-2">
+          MICRO-TASK ENGINE
+        </p>
+
+        <h1 className="text-4xl font-bold mb-3">
+          Find & Post Campus Tasks Easily
+        </h1>
+
+        <p className="text-gray-300 max-w-xl">
+          Browse available micro-tasks or post your own tasks to get help from other students.
+        </p>
+      </div>
 
       {/* CONTROLS */}
-      <div className="flex flex-wrap gap-3 mb-5">
-        {/* SEARCH */}
+      <div className="flex flex-wrap gap-3 mb-8 justify-center">
+
         <input
           type="text"
           placeholder="Search tasks..."
-          className="px-3 py-2 border rounded-md w-48"
+          className="px-4 py-2 rounded-lg bg-[#1e2f45] border border-gray-600 focus:outline-none"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
 
-        {/* CATEGORY */}
         <select
-          className="px-3 py-2 border rounded-md bg-gray-500 text-white"
+          className="px-4 py-2 rounded-lg bg-[#1e2f45] border border-gray-600"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         >
@@ -84,9 +93,8 @@ const TaskDashboard = () => {
           <option value="Other">Other</option>
         </select>
 
-        {/* STATUS */}
         <select
-          className="px-3 py-2 border rounded-md bg-gray-500 text-white"
+          className="px-4 py-2 rounded-lg bg-[#1e2f45] border border-gray-600"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
         >
@@ -96,49 +104,52 @@ const TaskDashboard = () => {
           <option value="completed">Completed</option>
         </select>
 
-        {/* POST BUTTON */}
         <button
           onClick={handlePostTask}
-          className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
+          className="bg-green-500 hover:bg-green-600 px-5 py-2 rounded-lg font-semibold shadow-md"
         >
           + Post Task
         </button>
       </div>
 
-      {/* TASK CARDS */}
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
+      {/* TASK GRID */}
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-6 flex w-full max-w-6xl justify-center mx-auto ">
+        
+
         {tasks.length > 0 ? (
           tasks.map((task) => (
             <div
               key={task._id}
-              className="p-4 rounded-xl bg-gray-500 shadow hover:shadow-lg transition"
+              className="bg-[#13263a] border border-gray-700 rounded-2xl p-5 shadow-lg hover:scale-[1.02] transition"
             >
-              <h3 className="font-semibold text-lg">{task.description}</h3>
+              <h3 className="text-lg font-semibold mb-2 bg-gray-700/50 px-2 py-1 rounded-full inline-block">
+                {task.description}
+              </h3>
 
-              <p className="text-sm text-black">💰 LKR {task.budget}</p>
-              <p className="text-sm text-black">📍 {task.location}</p>
-              <p className="text-sm text-black">📂 {task.category}</p>
+              <p className="text-sm text-gray-300">💰 LKR {task.budget}</p>
+              <p className="text-sm text-gray-300">📍 {task.location}</p>
+              <p className="text-sm text-gray-300">📂 {task.category}</p>
 
               <span
-                className={`inline-block mt-2 px-2 py-1 text-white text-xs rounded ${getStatusStyle(
-                  task.status,
+                className={`inline-block mt-3 px-3 py-1 text-xs rounded-full text-white ${getStatusStyle(
+                  task.status
                 )}`}
               >
                 {task.status}
               </span>
 
-              {/* VIEW BUTTON */}
               <button
-                className="mt-3 bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
                 onClick={() => navigate(`/task/${task._id}`)}
+                className="mt-4 w-full bg-blue-500 hover:bg-darkblue-400 py-2 rounded-lg text-sm font-semibold text-white tranparent border boder-blue-500 hover:border-blue-600 transition"
               >
                 View Task
               </button>
             </div>
           ))
         ) : (
-          <p className="text-gray-500">No tasks found.</p>
+          <p className="text-gray-400">No tasks found.</p>
         )}
+
       </div>
     </div>
   );
