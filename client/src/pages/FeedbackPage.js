@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const FeedbackPage = () => {
@@ -152,6 +153,15 @@ const FeedbackPage = () => {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 md:px-6">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-slate-50">Share Your Feedback</h1>
+        <Link
+          to="/feedbacks"
+          className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-slate-50 hover:bg-slate-600 transition"
+        >
+          View Feedback Display
+        </Link>
+      </div>
       <div className="mb-8 rounded-2xl border border-slate-700/80 bg-slate-900/60 p-6 shadow-xl">
         <h1 className="mb-6 text-2xl font-semibold text-slate-50">Share Your Feedback</h1>
         <form onSubmit={handleSubmit} className="space-y-4">

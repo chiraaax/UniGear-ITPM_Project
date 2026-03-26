@@ -5,7 +5,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-10 md:px-6 md:py-12">
+    <div className="mx-auto flex max-w-7xl flex-col gap-8 px-2 py-10 md:px-4 md:py-12">
       <section className="space-y-3">
         <p className="inline-flex rounded-full border border-slate-700/70 bg-slate-900/60 px-3 py-1 text-xs font-medium uppercase tracking-[0.22em] text-slate-300">
           Campus-first sharing

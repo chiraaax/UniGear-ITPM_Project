@@ -18,6 +18,7 @@ const transactionRoutes = require('./routes/transactions');
 const userRoutes = require('./routes/users');
 const authRoutes = require('./routes/auth');
 const feedbackRoutes = require('./routes/feedback');
+const adminRoutes = require('./routes/admin');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/rentals', rentalRoutes);
@@ -25,6 +26,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Simple health check
 app.get('/api/health', (req, res) => {

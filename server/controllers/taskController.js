@@ -64,6 +64,41 @@ exports.deleteTask = async (req, res) => {
   }
 };
 
+// ================= UPDATE TASK STATUS =================
+exports.updateStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const task = await Task.findById(id);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Map frontend status to backend status
+    const statusMapping = {
+      'Pending': 'Pending',
+      'In Progress': 'In Progress',
+      'Completed': 'Completed',
+      'Cancelled': 'Cancelled'
+    };
+
+    const backendStatus = statusMapping[status] || status;
+    task.status = backendStatus;
+
+    // If accepting task (changing to In Progress), assign to current user if not creator
+    if (backendStatus === 'In Progress' && !task.creator.equals(req.user._id)) {
+      task.assignedTo = req.user._id;
+    }
+
+    await task.save();
+    res.json(task);
+  } catch (err) {
+    console.error('Status update failed:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // Update task details
 // ================= UPDATE TASK =================
 exports.updateTask = async (req, res) => {
@@ -95,5 +130,50 @@ exports.updateTask = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Failed to update task' });
+  }
+};
+
+
+
+// 🔹 GET SINGLE TASK
+exports.getTaskById = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id)
+      .populate('creator', 'name trustScore');
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+    if (task.moderationStatus !== 'approved') {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    res.json(task);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 🔹 ACCEPT TASK (MAIN FEATURE)
+exports.acceptTask = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    if (task.status !== 'Pending') {
+      return res.status(400).json({ message: 'Task already accepted' });
+    }
+
+    task.status = 'In Progress';
+    task.assignedTo = req.user._id;
+
+    await task.save();
+
+    res.json(task);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to accept task' });
   }
 };
