@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
+const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000/api";
 
 const StatusDashboard = () => {
   const { token, user } = useAuth();
@@ -14,29 +14,28 @@ const StatusDashboard = () => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState(null);
+  const [completing, setCompleting] = useState(false);
 
   const authHeaders = token
-    ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+    ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
     : {};
 
-  const showNotification = (message, type = 'success') => {
+  const showNotification = (message, type = "success") => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 3000);
   };
 
   useEffect(() => {
     if (!token) {
-      navigate('/auth');
+      navigate("/auth");
       return;
     }
-
     loadData();
   }, [token]);
 
   const loadData = async () => {
     try {
       const headers = { Authorization: `Bearer ${token}` };
-
       const [meRes, itemsRes, tasksRes, txRes] = await Promise.all([
         fetch(`${API_BASE}/users/me`, { headers }),
         fetch(`${API_BASE}/rentals/my-items`, { headers }),
@@ -62,265 +61,245 @@ const StatusDashboard = () => {
     }
   };
 
-  // ================= ITEM =================
+  // ========== ITEMS ==========
   const handleDeleteItem = async (id) => {
-    if (!window.confirm('Delete this item?')) return;
-
+    if (!window.confirm("Delete this item?")) return;
     try {
       const res = await fetch(`${API_BASE}/rentals/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: authHeaders,
       });
-
-      if (!res.ok) throw new Error('Failed to delete item');
-
+      if (!res.ok) throw new Error("Failed to delete item");
       setMyItems((prev) => prev.filter((i) => i._id !== id));
-      showNotification('✅ Item deleted successfully', 'success');
+      showNotification("✅ Item deleted successfully");
     } catch (error) {
-      console.error('Delete error:', error);
-      showNotification('❌ Failed to delete item', 'error');
+      console.error(error);
+      showNotification("❌ Failed to delete item", "error");
     }
   };
 
-  const handleEditItem = (id) => {
-    navigate(`/edit-item/${id}`);
-  };
+  const handleEditItem = (id) => navigate(`/edit-item/${id}`);
 
-  // ================= TASK =================
+  // ========== TASKS ==========
+  const handleEditTask = (id) => navigate(`/edit-task/${id}`);
+
   const handleDeleteTask = async (id) => {
-    if (!window.confirm('Delete this task?')) return;
-
+    if (!window.confirm("Delete this task?")) return;
     try {
       const res = await fetch(`${API_BASE}/tasks/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: authHeaders,
       });
-
-      if (!res.ok) throw new Error('Failed to delete task');
-
+      if (!res.ok) throw new Error("Failed to delete task");
       setMyTasks((prev) => prev.filter((t) => t._id !== id));
-      showNotification('✅ Task deleted successfully', 'success');
+      showNotification("✅ Task deleted successfully");
     } catch (error) {
-      console.error('Delete error:', error);
-      showNotification('❌ Failed to delete task', 'error');
+      console.error(error);
+      showNotification("❌ Failed to delete task", "error");
     }
   };
 
-  const handleEditTask = (id) => {
-    navigate(`/edit-task/${id}`);
+  const handleCompleteTask = async (taskId) => {
+    if (!token) {
+      alert("Please login");
+      return;
+    }
+
+    try {
+      setCompleting(true);
+
+      const res = await fetch(`${API_BASE}/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: "Completed" }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.message || "Failed to complete task");
+        return;
+      }
+
+      setMyTasks((prev) =>
+        prev.map((t) => (t._id === taskId ? { ...t, status: "Completed" } : t))
+      );
+
+      showNotification("✅ Task marked as Completed");
+      navigate("/micro-tasks", { state: { updated: true } });
+    } catch (error) {
+      console.error(error);
+      showNotification("❌ Failed to complete task", "error");
+    } finally {
+      setCompleting(false);
+    }
   };
 
-  // TRANSACTIONS 
-  const handleConfirm = async (txId) => {
-    await fetch(`${API_BASE}/transactions/${txId}/confirm`, {
-      method: 'POST',
-      headers: authHeaders,
-      body: JSON.stringify({}),
-    });
-    loadData();
-  };
-
-  const handleMarkCompleted = async (tx) => {
-    await fetch(`${API_BASE}/transactions/${tx._id}/status`, {
-      method: 'PATCH',
-      headers: authHeaders,
-      body: JSON.stringify({ status: 'Completed' }),
-    });
-    loadData();
-  };
-
-  const handleRate = async (txId, rating) => {
-    await fetch(`${API_BASE}/transactions/${txId}/rate`, {
-      method: 'POST',
-      headers: authHeaders,
-      body: JSON.stringify({ rating }),
-    });
-    loadData();
-  };
+  // ========== FILTER TASKS ==========
+  const pendingTasks = myTasks.filter((t) => t.status?.toLowerCase() === "pending");
+  const inProgressTasks = myTasks.filter(
+    (t) =>
+      t.status?.toLowerCase() === "inprogress" ||
+      t.status?.toLowerCase() === "in progress"
+  );
 
   if (!user) return null;
 
   return (
-    <div className="mx-auto max-w-7xl px-2 py-8 md:px-4 md:py-10">
-      
-      {/* NOTIFICATION TOAST */}
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white px-4 md:px-8 py-8">
+      {/* NOTIFICATION */}
       {notification && (
-        <div className={`fixed top-4 right-4 px-6 py-3 rounded-lg text-white font-semibold shadow-lg z-50 animate-pulse ${
-          notification.type === 'success' 
-            ? 'bg-green-500' 
-            : 'bg-red-500'
-        }`}>
+        <div
+          className={`fixed top-4 right-4 px-6 py-3 rounded-lg font-semibold shadow-lg z-50 animate-pulse ${
+            notification.type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}
+        >
           {notification.message}
         </div>
       )}
-      
+
       {/* HEADER */}
-      <header className="mb-6 flex items-center justify-between gap-3">
+      <header className="mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-50 md:text-3xl">
-            My UniGear activity
-          </h1>
-          <p className="text-sm text-slate-300">
+          <h1 className="text-3xl font-bold text-white">My UniGear Activity</h1>
+          <p className="text-gray-400 mt-1">
             Track your listings, tasks, and handovers.
           </p>
         </div>
-
-        {/* ADD BUTTONS */}
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <button
-            className="small-action bg-green-600"
-            onClick={() => navigate('/add-item')}
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded shadow transition duration-200"
+            onClick={() => navigate("/add-item")}
           >
             + Add Item
           </button>
-
           <button
-            className="small-action bg-blue-600"
-            onClick={() => navigate('/post-task')}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded shadow transition duration-200"
+            onClick={() => navigate("/tasks")}
           >
             + Post Task
           </button>
         </div>
-
         {profile && (
-          <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-700 px-3 py-2 text-xs">
+          <div className="flex items-center gap-3 bg-gray-800 px-4 py-2 rounded-2xl shadow">
             <div>
-              <div className="text-slate-100">{profile.name}</div>
-              <div className="text-slate-400">{profile.email}</div>
+              <div className="font-semibold">{profile.name}</div>
+              <div className="text-gray-400 text-sm">{profile.email}</div>
             </div>
-            <div className="ml-2 text-emerald-300">
+            <div className="ml-2 text-green-400 font-mono">
               {profile.trustScore?.toFixed(2)}
             </div>
           </div>
         )}
       </header>
 
-      {loading && <p className="text-slate-400">Loading...</p>}
+      {loading && <p className="text-gray-400">Loading...</p>}
 
-      <div className="grid gap-6 md:grid-cols-2">
-
+      <div className="grid gap-8 md:grid-cols-2">
         {/* ITEMS */}
         <section>
-          <h2 className="text-slate-200">My rental listings</h2>
-
-          {myItems.map((item) => (
-            <div key={item._id} className="bg-slate-900 p-3 rounded mt-2">
-              <h3 className="text-white">{item.title}</h3>
-              <p className="text-gray-300">LKR {item.dailyRate}</p>
-
-              <div className="flex gap-2 mt-2">
-                <button
-                  className="small-action bg-yellow-600"
-                  onClick={() => handleEditItem(item._id)}
-                >
-                  Edit
-                </button>
-
-                <button
-                  className="small-action bg-red-600"
-                  onClick={() => handleDeleteItem(item._id)}
-                >
-                  Delete
-                </button>
+          <h2 className="text-xl font-semibold text-gray-200 mb-4">My Rental Listings</h2>
+          {myItems.length > 0 ? (
+            myItems.map((item) => (
+              <div
+                key={item._id}
+                className="bg-gray-900 p-4 rounded-lg shadow hover:shadow-lg transition duration-200"
+              >
+                <h3 className="text-white text-lg font-semibold">{item.title}</h3>
+                <p className="text-gray-300 mt-1">LKR {item.dailyRate}</p>
+                <div className="flex gap-2 mt-3">
+                  <button
+                    className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 rounded transition duration-200"
+                    onClick={() => handleEditItem(item._id)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded transition duration-200"
+                    onClick={() => handleDeleteItem(item._id)}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-
-          {myItems.length === 0 && (
-            <p className="text-slate-400">No items yet</p>
+            ))
+          ) : (
+            <p className="text-gray-400">No items yet</p>
           )}
         </section>
 
         {/* TASKS */}
         <section>
-          <h2 className="text-slate-200">My tasks</h2>
+          <h2 className="text-xl font-semibold text-gray-200 mb-4">My Tasks</h2>
 
-          {myTasks.map((task) => (
-            <div key={task._id} className="bg-slate-900 p-3 rounded mt-2">
-              <h3 className="text-white">{task.description}</h3>
-              <p className="text-gray-300">Budget: LKR {task.budget}</p>
-
-              <div className="flex gap-2 mt-2 flex-wrap">
-                <button
-                  className="small-action"
-                  onClick={() => navigate(`/tasks?task=${task._id}`)}
+          {/* Pending */}
+          <div className="mb-6">
+            <h3 className="text-yellow-400 mb-2">Pending Tasks</h3>
+            {pendingTasks.length > 0 ? (
+              pendingTasks.map((task) => (
+                <div
+                  key={task._id}
+                  className="bg-gray-900 p-4 rounded-lg shadow hover:shadow-lg transition duration-200 mb-2 border-l-2 border-b-2 border-t-2 border-r-2 border-gray-700"
                 >
-                  View
-                </button>
+                  <h3 className="text-white font-semibold">{task.description}</h3>
+                  <p className="text-gray-300">LKR {task.budget}</p>
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={() => navigate(`/tasks?task=${task._id}`)}
+                      className="px-3 py-1 border-l-2 border-b-2 border-t-2 border-r-2 border-blue-600 rounded transition duration-200"
+                    >
+                      View
+                    </button>
+                    <button
+                      onClick={() => handleEditTask(task._id)}
+                      className="px-3 py-1 border-l-2 border-b-2 border-t-2 border-r-2 border-yellow-600  rounded transition duration-200"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTask(task._id)}
+                      className="px-3 py-1 border-l-2 border-b-2 border-t-2 border-r-2 border-red-600  rounded transition duration-200"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-400">No pending tasks</p>
+            )}
+          </div>
 
-                <button
-                  className="small-action bg-yellow-600"
-                  onClick={() => handleEditTask(task._id)}
+          {/* In Progress */}
+          <div>
+            <h3 className="text-blue-400 mb-2">In Progress Tasks</h3>
+            {inProgressTasks.length > 0 ? (
+              inProgressTasks.map((task) => (
+                <div
+                  key={task._id}
+                  className="bg-gray-900 p-4 rounded-lg shadow hover:shadow-lg transition duration-200 mb-2 border-l-2 border-b-2 border-t-2 border-r-2 border-gray-700"
                 >
-                  Edit
-                </button>
-
-                <button
-                  className="small-action bg-red-600"
-                  onClick={() => handleDeleteTask(task._id)}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-
-          {myTasks.length === 0 && (
-            <p className="text-slate-400">No tasks yet</p>
-          )}
+                  <h3 className="text-white font-semibold">{task.description}</h3>
+                  <p className="text-gray-300">LKR {task.budget}</p>
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={() => handleCompleteTask(task._id)}
+                      disabled={completing}
+                      className="px-4 py-2 bg-green-500 hover:bg-green-600 rounded transition duration-200 disabled:opacity-50"
+                    >
+                      {completing ? "Completing..." : "Complete Task"}
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-400">No in-progress tasks</p>
+            )}
+          </div>
         </section>
       </div>
-
-      {/* TRANSACTIONS */}
-      <section className="mt-6">
-        <h2 className="text-slate-200">Transactions</h2>
-
-        {transactions.map((tx) => {
-          const bothConfirmed = tx.ownerConfirmed && tx.counterpartyConfirmed;
-
-          return (
-            <div key={tx._id} className="bg-slate-900 p-3 rounded mt-2">
-              <p className="text-white">Status: {tx.status}</p>
-
-              {!bothConfirmed && (
-                <button
-                  className="small-action mt-2"
-                  onClick={() => handleConfirm(tx._id)}
-                >
-                  Confirm
-                </button>
-              )}
-
-              {bothConfirmed && tx.status !== 'Completed' && (
-                <button
-                  className="small-action bg-green-600 mt-2"
-                  onClick={() => handleMarkCompleted(tx)}
-                >
-                  Complete
-                </button>
-              )}
-
-              {tx.status === 'Completed' && (
-                <div className="flex gap-1 mt-2">
-                  {[1, 2, 3, 4, 5].map((r) => (
-                    <button
-                      key={r}
-                      className="small-action"
-                      onClick={() => handleRate(tx._id, r)}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-
-        {transactions.length === 0 && (
-          <p className="text-slate-400">No transactions yet</p>
-        )}
-      </section>
     </div>
   );
 };

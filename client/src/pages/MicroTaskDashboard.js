@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 
 const API_BASE = "http://localhost:5000/api";
 
 const TaskDashboard = () => {
-  const { theme } = useAuth();
-  const isLight = theme === "light";
   const [tasks, setTasks] = useState([]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
@@ -44,9 +41,9 @@ const TaskDashboard = () => {
   const getStatusStyle = (status) => {
     switch (status?.toLowerCase()) {
       case "pending":
-        return "bg-yellow-400";
+        return "bg-yellow-600";
       case "inprogress":
-        return "bg-blue-500";
+        return "bg-blue-700";
       case "completed":
         return "bg-green-500";
       default:
@@ -55,17 +52,11 @@ const TaskDashboard = () => {
   };
 
   return (
-    <div
-      className={`min-h-screen p-6 flex flex-col items-center ${
-        isLight
-          ? "bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900"
-          : "bg-gradient-to-br from-[#0b1a2a] to-[#0f2a44] text-white"
-      }`}
-    >
+    <div className="min-h-screen bg-gradient-to-br from-[#0b1a2a] to-[#0f2a44] text-white p-6  ">
 
       {/* HERO SECTION */}
-      <div className="mb-10 max-w-4xl">
-        <p className={`text-base tracking-widest mb-2 ${isLight ? "text-sky-700" : "text-blue-300"}`}>
+      <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-10 md:py-12">
+        <p className="text-sm tracking-widest text-blue-300 mb-2">
           MICRO-TASK ENGINE
         </p>
 
@@ -73,33 +64,24 @@ const TaskDashboard = () => {
           Find & Post Campus Tasks Easily
         </h1>
 
-        <p className={`text-base max-w-xl ${isLight ? "text-slate-600" : "text-gray-300"}`}>
-          Browse available micro-tasks or post your own tasks to get help from
-          other students.
+        <p className="text-gray-300 max-w-xl">
+          Browse available micro-tasks or post your own tasks to get help from other students.
         </p>
       </div>
 
       {/* CONTROLS */}
-      <div className="flex flex-wrap gap-3 mb-8">
+      <div className="flex flex-wrap gap-3 mb-8 justify-center">
 
         <input
           type="text"
           placeholder="Search tasks..."
-          className={`px-4 py-3 rounded-xl border focus:outline-none text-base ${
-            isLight
-              ? "bg-white border-slate-300"
-              : "bg-[#1e2f45] border-gray-600 text-white"
-          }`}
+          className="px-4 py-2 rounded-lg bg-[#1e2f45] border border-gray-600 focus:outline-none"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
 
         <select
-          className={`px-4 py-3 rounded-xl border text-base ${
-            isLight
-              ? "bg-white border-slate-300"
-              : "bg-[#1e2f45] border-gray-600 text-white"
-          }`}
+          className="px-4 py-2 rounded-lg bg-[#1e2f45] border border-gray-600"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         >
@@ -112,11 +94,7 @@ const TaskDashboard = () => {
         </select>
 
         <select
-          className={`px-4 py-3 rounded-xl border text-base ${
-            isLight
-              ? "bg-white border-slate-300"
-              : "bg-[#1e2f45] border-gray-600 text-white"
-          }`}
+          className="px-4 py-2 rounded-lg bg-[#1e2f45] border border-gray-600"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
         >
@@ -128,32 +106,29 @@ const TaskDashboard = () => {
 
         <button
           onClick={handlePostTask}
-          className="bg-green-500 hover:bg-green-600 px-6 py-3 rounded-xl font-semibold shadow-md text-base"
+          className="bg-green-500 hover:bg-green-600 px-5 py-2 rounded-lg font-semibold shadow-md"
         >
           + Post Task
         </button>
       </div>
 
       {/* TASK GRID */}
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-6 justify-center w-full max-w-7xl">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-6 flex w-full max-w-6xl justify-center mx-auto ">
+        
 
         {tasks.length > 0 ? (
           tasks.map((task) => (
             <div
               key={task._id}
-              className={`border rounded-2xl p-6 shadow-lg hover:scale-[1.02] transition ${
-                isLight
-                  ? "bg-white border-slate-200"
-                  : "bg-[#13263a] border-gray-700"
-              }`}
+              className="bg-[#13263a] border border-gray-700 rounded-2xl p-5 shadow-lg hover:scale-[1.02] transition"
             >
-              <h3 className="text-lg font-semibold mb-2">
+              <h3 className="text-lg font-semibold mb-2 bg-gray-700/50 px-2 py-1 rounded-full inline-block">
                 {task.description}
               </h3>
 
-              <p className={`text-base ${isLight ? "text-slate-600" : "text-gray-300"}`}>💰 LKR {task.budget}</p>
-              <p className={`text-base ${isLight ? "text-slate-600" : "text-gray-300"}`}>📍 {task.location}</p>
-              <p className={`text-base ${isLight ? "text-slate-600" : "text-gray-300"}`}>📂 {task.category}</p>
+              <p className="text-sm text-gray-300">💰 LKR {task.budget}</p>
+              <p className="text-sm text-gray-300">📍 {task.location}</p>
+              <p className="text-sm text-gray-300">📂 {task.category}</p>
 
               <span
                 className={`inline-block mt-3 px-3 py-1 text-xs rounded-full text-white ${getStatusStyle(
@@ -165,14 +140,14 @@ const TaskDashboard = () => {
 
               <button
                 onClick={() => navigate(`/task/${task._id}`)}
-                className="mt-5 w-full bg-blue-500 hover:bg-blue-400 py-3 rounded-xl text-base font-semibold text-white"
+                className="mt-4 w-full bg-blue-500 hover:bg-darkblue-400 py-2 rounded-lg text-sm font-semibold text-white tranparent border boder-blue-500 hover:border-blue-600 transition"
               >
                 View Task
               </button>
             </div>
           ))
         ) : (
-          <p className={isLight ? "text-slate-600" : "text-gray-400"}>No tasks found.</p>
+          <p className="text-gray-400">No tasks found.</p>
         )}
 
       </div>

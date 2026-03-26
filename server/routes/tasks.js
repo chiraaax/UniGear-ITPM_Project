@@ -8,10 +8,6 @@ const requireMinTrustScore = require('../middleware/trustCheck');
 const { deleteTask, getTaskById, acceptTask, updateStatus } = require('../controllers/taskController');
 
 const router = express.Router();
-const TASK_CATEGORIES = ['Delivery', 'Cleaning', 'Academic', 'Technical', 'Other'];
-const TASK_STATUSES = ['Pending', 'In Progress', 'Completed', 'Cancelled'];
-const isNonEmptyString = (value, min, max) =>
-  typeof value === 'string' && value.trim().length >= min && value.trim().length <= max;
 
 // CREATE task (subject to TrustScore rule)
 router.post('/', auth, requireMinTrustScore(2.0), async (req, res, next) => {
@@ -20,34 +16,18 @@ router.post('/', auth, requireMinTrustScore(2.0), async (req, res, next) => {
     const { description, budget, deadline, location, category } = req.body;
     console.log('Extracted category:', category); // Debug log
 
-    if (!isNonEmptyString(description, 5, 500)) {
-      return res.status(400).json({ message: 'Description must be 5-500 characters.' });
-    }
-    if (!TASK_CATEGORIES.includes(category)) {
-      return res.status(400).json({ message: 'Invalid category.' });
-    }
-    if (Number.isNaN(Number(budget)) || Number(budget) < 0) {
-      return res.status(400).json({ message: 'Budget must be a positive number.' });
-    }
-    if (!isNonEmptyString(location, 2, 150)) {
-      return res.status(400).json({ message: 'Location must be 2-150 characters.' });
-    }
-    const parsedDeadline = new Date(deadline);
-    if (Number.isNaN(parsedDeadline.getTime())) {
-      return res.status(400).json({ message: 'Invalid deadline.' });
-    }
-    if (parsedDeadline <= new Date()) {
-      return res.status(400).json({ message: 'Deadline must be in the future.' });
+    // Validate required fields
+    if (!category || category.trim() === '') {
+      return res.status(400).json({ message: 'Category is required' });
     }
 
     const task = await Task.create({
       creator: req.user._id,
       description: description.trim(),
-      budget: Number(budget),
-      deadline: parsedDeadline,
+      budget,
+      deadline,
       location: location.trim(),
       category: category.trim(),
-      moderationStatus: 'pending',
     });
     res.status(201).json(task);
   } catch (err) {
@@ -60,7 +40,7 @@ router.post('/', auth, requireMinTrustScore(2.0), async (req, res, next) => {
 router.get('/', async (req, res, next) => {
   try {
     const { search, category, status } = req.query;
-    let query = { moderationStatus: 'approved' };
+    let query = {};
 
     if (search) {
       query.description = { $regex: search, $options: 'i' };
@@ -123,38 +103,6 @@ console.log('Current task status:', task.status); // Debug log
         task[field] = req.body[field];
       }
     });
-    if (req.body.description !== undefined && !isNonEmptyString(req.body.description, 5, 500)) {
-      return res.status(400).json({ message: 'Description must be 5-500 characters.' });
-    }
-    if (req.body.category !== undefined && !TASK_CATEGORIES.includes(req.body.category)) {
-      return res.status(400).json({ message: 'Invalid category.' });
-    }
-    if (req.body.budget !== undefined && (Number.isNaN(Number(req.body.budget)) || Number(req.body.budget) < 0)) {
-      return res.status(400).json({ message: 'Budget must be a positive number.' });
-    }
-    if (req.body.location !== undefined && !isNonEmptyString(req.body.location, 2, 150)) {
-      return res.status(400).json({ message: 'Location must be 2-150 characters.' });
-    }
-    if (req.body.deadline !== undefined) {
-      const parsed = new Date(req.body.deadline);
-      if (Number.isNaN(parsed.getTime())) {
-        return res.status(400).json({ message: 'Invalid deadline.' });
-      }
-      task.deadline = parsed;
-    }
-    if (req.body.description !== undefined) {
-      task.description = req.body.description.trim();
-    }
-    if (req.body.location !== undefined) {
-      task.location = req.body.location.trim();
-    }
-    if (req.body.budget !== undefined) {
-      task.budget = Number(req.body.budget);
-    }
-    task.moderationStatus = 'pending';
-    task.moderationNote = '';
-    task.moderatedBy = null;
-    task.moderatedAt = null;
 
     await task.save();
     res.json(task);
@@ -265,9 +213,6 @@ router.put('/status/:id', auth, async (req, res, next) => {
     };
 
     const backendStatus = statusMapping[status] || status;
-    if (!TASK_STATUSES.includes(backendStatus)) {
-      return res.status(400).json({ message: 'Invalid status.' });
-    }
     task.status = backendStatus;
 
     await task.save();

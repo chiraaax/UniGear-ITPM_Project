@@ -13,7 +13,7 @@ const taskSchema = new mongoose.Schema(
       required: true
     },
 
-    // 🔥 FIXED CATEGORY
+    //  FIXED CATEGORY
     category: {
       type: String,
       required: true,
