@@ -43,6 +43,7 @@ router.get('/items', async (req, res, next) => {
   }
 });
 
+// GET single item details by ID
 router.get('/items/:id', async (req, res, next) => {
   try {
     const item = await Item.findById(req.params.id).populate('owner', 'name trustScore');
@@ -50,6 +51,29 @@ router.get('/items/:id', async (req, res, next) => {
       return res.status(404).json({ message: 'Item not found' });
     }
     res.json(item);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Update item listing (only by owner, and only if no active future bookings)
+router.put('/items/:id', auth, async (req, res, next) => {
+  try {
+    const item = await Item.findById(req.params.id);
+
+    if (!item) return res.status(404).json({ message: 'Item not found' });
+
+    if (!item.owner.equals(req.user._id)) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    const updated = await Item.findByIdAndUpdate(
+        req.params.id,
+        req.body,
+        { new: true }
+    );
+
+    res.json(updated);
   } catch (err) {
     next(err);
   }
@@ -102,16 +126,74 @@ router.delete('/items/:id', auth, async (req, res, next) => {
 router.post('/items/:id/bookings', auth, async (req, res, next) => {
   try {
     const { startDate, endDate } = req.body;
+
     const item = await Item.findById(req.params.id).populate('owner');
     if (!item) {
       return res.status(404).json({ message: 'Item not found' });
     }
 
+    if (item.owner._id.equals(req.user._id)) {
+      return res.status(400).json({
+        message: 'You cannot book your own item'
+      });
+    }
+
+    if (!item.isActive) {
+      return res.status(400).json({
+        message: 'Item is not available for booking'
+      });
+    }
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        message: 'Start date and end date are required.'
+      });
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const now = new Date();
+
+    if (isNaN(start) || isNaN(end)) {
+      return res.status(400).json({
+        message: 'Invalid booking dates.'
+      });
+    }
+
+    if (start > end) {
+      return res.status(400).json({
+        message: 'Start date must be before end date.'
+      });
+    }
+
+    if (start < now) {
+      return res.status(400).json({
+        message: 'Start date cannot be in the past.'
+      });
+    }
+
+    const existingBooking = await Booking.findOne({
+      item: item._id,
+      status: { $in: ['pending', 'confirmed'] },
+      $or: [
+        {
+          startDate: { $lte: end },
+          endDate: { $gte: start }
+        }
+      ]
+    });
+
+    if (existingBooking) {
+      return res.status(400).json({
+        message: 'Item already booked for selected dates'
+      });
+    }
+
     const booking = await Booking.create({
       item: item._id,
       borrower: req.user._id,
-      startDate,
-      endDate,
+      startDate: start,
+      endDate: end,
     });
 
     const transaction = await Transaction.create({
@@ -124,6 +206,7 @@ router.post('/items/:id/bookings', auth, async (req, res, next) => {
     });
 
     res.status(201).json({ booking, transaction });
+
   } catch (err) {
     next(err);
   }
@@ -142,18 +225,31 @@ router.put('/bookings/:id/return', auth, async (req, res, next) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
+    if (booking.status === 'returned') {
+      return res.status(400).json({
+        message: 'Item already returned'
+      });
+    }
+
     booking.status = 'returned';
     booking.returnedAt = new Date();
     await booking.save();
 
-    await Transaction.findOneAndUpdate(
-      { booking: booking._id },
-      { status: 'completed' }
+    const transaction = await Transaction.findOneAndUpdate(
+        { booking: booking._id },
+        { returnTime: new Date() },
+        { new: true }
     );
 
+    if (!transaction) {
+      return res.status(404).json({
+        message: 'Transaction not found'
+      });
+    }
+
     await Item.findByIdAndUpdate(
-      booking.item._id, 
-      { status: 'available' }
+        booking.item._id,
+        { status: 'available' }
     );
 
     res.json({ message: 'Item returned successfully.' });
@@ -161,6 +257,36 @@ router.put('/bookings/:id/return', auth, async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+// Get bookings made by the authenticated user
+router.get('/my-bookings', auth, async (req, res) => {
+  const bookings = await Booking.find({
+    borrower: req.user._id
+  }).populate('item');
+
+  res.json(bookings);
+});
+
+// Get bookings for items owned by the authenticated user
+router.get('/owner-bookings', auth, async (req, res) => {
+  const items = await Item.find({ owner: req.user._id });
+
+  const bookings = await Booking.find({
+    item: { $in: items.map(i => i._id) }
+  }).populate('borrower item');
+
+  res.json(bookings);
+});
+
+// Check availability of an item for a given date range
+router.get('/items/:id/availability', async (req, res) => {
+  const bookings = await Booking.find({
+    item: req.params.id,
+    status: { $in: ['pending', 'confirmed'] }
+  });
+
+  res.json(bookings);
 });
 
 module.exports = router;

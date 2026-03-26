@@ -10,6 +10,7 @@ const app = express();
 // Core middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Modular routes
 const rentalRoutes = require('./routes/rentals');

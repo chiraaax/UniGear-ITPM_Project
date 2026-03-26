@@ -38,26 +38,17 @@ const transactionSchema = new mongoose.Schema(
 
 // Strict Business Rule #3:
 // transaction status cannot move to 'Completed' until both parties confirm
-transactionSchema.pre('findOneAndUpdate', function (next) {
-  const update = this.getUpdate() || {};
-  const newStatus = update.status;
+transactionSchema.pre('findOneAndUpdate', async function () {
+    const update = this.getUpdate() || {};
+    const newStatus = update.status;
 
-  if (newStatus === 'Completed') {
-    const ownerConfirmed =
-      update.ownerConfirmed !== undefined ? update.ownerConfirmed : this._update.$set?.ownerConfirmed;
-    const counterpartyConfirmed =
-      update.counterpartyConfirmed !== undefined
-        ? update.counterpartyConfirmed
-        : this._update.$set?.counterpartyConfirmed;
+    if (newStatus === 'Completed') {
+        const docToUpdate = await this.model.findOne(this.getQuery());
 
-    if (!ownerConfirmed || !counterpartyConfirmed) {
-      const err = new Error('Both parties must confirm before completing the transaction.');
-      err.status = 400;
-      return next(err);
+        if (!docToUpdate.ownerConfirmed || !docToUpdate.counterpartyConfirmed) {
+            throw new Error('Both parties must confirm before completing the transaction.');
+        }
     }
-  }
-
-  next();
 });
 
 module.exports = mongoose.model('Transaction', transactionSchema);

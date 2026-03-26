@@ -118,6 +118,7 @@
 
 .module-page-container::before {
   content: '';
+  margin-top: 10px;
   position: absolute;
   inset: -40px;
   background: radial-gradient(circle at top right, rgba(94, 234, 212, 0.08), transparent 55%);
@@ -126,6 +127,7 @@
 
 .module-page-container h1 {
   font-size: 2rem;
+  margin-top: 2rem;
   margin-bottom: 0.3rem;
 }
 
