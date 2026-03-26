@@ -48,6 +48,34 @@ const taskSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'
     },
+    moderationStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending',
+    },
+    moderationNote: {
+      type: String,
+      maxlength: 300,
+    },
+    moderationReasonCode: {
+      type: String,
+      enum: [
+        'unsafe_content',
+        'spam',
+        'duplicate',
+        'pricing_abuse',
+        'missing_information',
+        'other',
+      ],
+      default: null,
+    },
+    moderatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    moderatedAt: {
+      type: Date,
+    },
   },
   { timestamps: true }
 );

@@ -7,7 +7,8 @@ const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
 const TaskDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token, user } = useAuth();
+  const { token, user, theme } = useAuth();
+  const isLight = theme === 'light';
 
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -90,38 +91,45 @@ const handleAcceptTask = async () => {
   if (error) return <div className="p-6 text-center text-red-500">{error}</div>;
   if (!task) return <div className="p-6 text-center">Task not found</div>;
 
+  // eslint-disable-next-line no-unused-vars
   const isCreator = user && task.creator && user._id === task.creator._id;
   const canAccept = true && task.status === 'Pending';
 
   return (
-    <div className="max-w-2xl mx-auto p-6 ">
-      <div className="bg-white shadow-lg rounded-lg p-6 bg-gray-500 text-white">
+    <div className="module-page-container" style={{ maxWidth: '980px' }}>
+      <div
+        className={`rounded-2xl border p-7 shadow-xl ${
+          isLight ? 'border-slate-200 bg-white text-slate-900' : 'border-slate-700/80 bg-slate-900/60 text-slate-50'
+        }`}
+      >
 
         {/* Title */}
-        <h1 className="text-2xl font-bold mb-4 bg-white text-black">{task.description}</h1>
+        <h1 className={`text-3xl font-bold mb-4 ${isLight ? 'text-slate-900' : 'text-slate-50'}`}>
+          {task.description}
+        </h1>
 
         {/* Task Details */}
-        <div className="grid grid-cols-2 gap-4 mb-6 text-black">
+        <div className={`grid grid-cols-2 gap-6 mb-7 ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
 
           <div>
-            <p className="text-gray-500">Category</p>
+            <p className="text-gray-500 text-base">Category</p>
             <p className="font-semibold">{task.category || 'N/A'}</p>
           </div>
 
           <div>
-            <p className="text-gray-500">Budget</p>
-            <p className="font-semibold text-green-600">
+            <p className="text-gray-500 text-base">Budget</p>
+            <p className={`font-semibold ${isLight ? 'text-green-700' : 'text-green-400'}`}>
               LKR {task.budget || 0}
             </p>
           </div>
 
           <div>
-            <p className="text-gray-500">Location</p>
+            <p className="text-gray-500 text-base">Location</p>
             <p className="font-semibold">{task.location || 'N/A'}</p>
           </div>
 
           <div>
-            <p className="text-gray-500">Deadline</p>
+            <p className="text-gray-500 text-base">Deadline</p>
             <p className="font-semibold">
               {task.deadline
                 ? new Date(task.deadline).toLocaleDateString()
@@ -133,8 +141,8 @@ const handleAcceptTask = async () => {
 
         {/* Status */}
         <div className="mb-6">
-          <p className="text-gray-500 mb-1">Status</p>
-          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusStyle(task.status)}`}>
+          <p className="text-gray-500 mb-1 text-base">Status</p>
+          <span className={`px-4 py-2 rounded-full text-base font-semibold ${getStatusStyle(task.status)}`}>
             {task.status}
           </span>
         </div>
@@ -142,20 +150,24 @@ const handleAcceptTask = async () => {
         {/* Creator */}
         {task.creator && (
           <div className="mb-6">
-            <p className="text-gray-500">Posted by</p>
+            <p className="text-gray-500 text-base">Posted by</p>
             <p className="font-semibold">{task.creator.name}</p>
-            <p className="text-sm text-gray-400">
+            <p className="text-base text-gray-400">
               Trust Score: {task.creator.trustScore?.toFixed(1) || 'N/A'}
             </p>
           </div>
         )}
 
         {/* Buttons */}
-        <div className="flex gap-4 flex-wrap " >
+        <div className="flex gap-4 flex-wrap">
 
           <button
             onClick={() => navigate('/micro-tasks')}
-            className="bg-gray-500 text-white px-5 py-2 rounded hover:bg-gray-600"
+            className={`px-6 py-3 rounded-xl font-semibold text-base border ${
+              isLight
+                ? 'bg-slate-100 text-slate-900 border-slate-200 hover:bg-slate-200'
+                : 'bg-slate-800 text-slate-50 border-slate-700 hover:bg-slate-700'
+            }`}
           >
             Back
           </button>
