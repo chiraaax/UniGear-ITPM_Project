@@ -16,6 +16,8 @@ import TaskStatusTracking from './pages/TaskStatusTracking';
 import TaskDetail from './pages/TaskDetail';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminLoginPage from './pages/AdminLoginPage';
+import FeedbackDisplayPage from './pages/FeedbackDisplayPage';
+import FeedbackAdminDashboard from './pages/FeedbackAdminDashboard';
 
 const AdminProtectedRoute = ({ children }) => {
   const { user } = useAuth();
@@ -99,8 +101,9 @@ function App() {
                   }`
                 }
               >
-                Feedback
+                Feedbacks
               </NavLink>
+
               {user && (
                 <NavLink
                   to="/me"
@@ -130,18 +133,32 @@ function App() {
                 </NavLink>
               )}
               {user?.role === 'admin' && (
-                <NavLink
-                  to="/admin"
-                  className={({ isActive }) =>
-                    `rounded-full px-3 py-1 transition ${
-                      isActive
-                        ? (isLight ? 'bg-slate-200 text-slate-900' : 'bg-slate-800 text-slate-50')
-                        : (isLight ? 'hover:bg-slate-200/80' : 'hover:bg-slate-800/60')
-                    }`
-                  }
-                >
-                  Admin
-                </NavLink>
+                <>
+                  <NavLink
+                    to="/admin"
+                    className={({ isActive }) =>
+                      `rounded-full px-3 py-1 transition ${
+                        isActive
+                          ? (isLight ? 'bg-slate-200 text-slate-900' : 'bg-slate-800 text-slate-50')
+                          : (isLight ? 'hover:bg-slate-200/80' : 'hover:bg-slate-800/60')
+                      }`
+                    }
+                  >
+                    Admin
+                  </NavLink>
+                  <NavLink
+                    to="/admin/feedbacks"
+                    className={({ isActive }) =>
+                      `rounded-full px-3 py-1 transition ${
+                        isActive
+                          ? (isLight ? 'bg-slate-200 text-slate-900' : 'bg-slate-800 text-slate-50')
+                          : (isLight ? 'hover:bg-slate-200/80' : 'hover:bg-slate-800/60')
+                      }`
+                    }
+                  >
+                    Feedback Analytics
+                  </NavLink>
+                </>
               )}
             </nav>
             <div className="flex items-center gap-2 text-xs md:text-sm">
@@ -191,12 +208,21 @@ function App() {
             <Route path="/edit-task/:id" element={<EditTask />} />
             <Route path="/edit-item/:id" element={<EditItem />} />
             <Route path="/feedback" element={<FeedbackPage />} />
+            <Route path="/feedbacks" element={<FeedbackDisplayPage />} />
             <Route path="/admin/login" element={<AdminLoginPage />} />
             <Route
               path="/admin"
               element={(
                 <AdminProtectedRoute>
                   <AdminDashboard />
+                </AdminProtectedRoute>
+              )}
+            />
+            <Route
+              path="/admin/feedbacks"
+              element={(
+                <AdminProtectedRoute>
+                  <FeedbackAdminDashboard />
                 </AdminProtectedRoute>
               )}
             />

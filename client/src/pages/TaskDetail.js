@@ -177,8 +177,8 @@ const handleAcceptTask = async () => {
             <button
               onClick={handleAcceptTask}
               disabled={accepting || task.status === 'In Progress'}
-              className="bg-green-500 text-white px-6 py-3 rounded-xl text-base font-semibold hover:bg-green-600 disabled:opacity-50"
-            >
+              className="bg-green-500 text-white px-5 py-2 rounded hover:bg-green-600 disabled:opacity-50"
+            > Accept Task
               {accepting
                 ? 'Accepting...'
                 : task.status === 'In Progress'

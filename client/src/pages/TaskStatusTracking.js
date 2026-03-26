@@ -127,7 +127,7 @@ const TaskStatusTracking = () => {
 
             <div className="space-y-4">
               <div>
-                <div className="flex justify-between text-base mb-2">
+                <div className="flex justify-between text-sm mb-2">
                   <span className="text-slate-300">Pending</span>
                   <span className="text-yellow-400 font-semibold">
                     {taskStats.total > 0
@@ -151,7 +151,7 @@ const TaskStatusTracking = () => {
               </div>
 
               <div>
-                <div className="flex justify-between text-base mb-2">
+                <div className="flex justify-between text-sm mb-2">
                   <span className="text-slate-300">In Progress</span>
                   <span className="text-blue-400 font-semibold">
                     {taskStats.total > 0
