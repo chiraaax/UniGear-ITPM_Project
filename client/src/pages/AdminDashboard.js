@@ -1,5 +1,44 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { 
+  Search, 
+  Filter, 
+  Download, 
+  Save, 
+  Trash2, 
+  ChevronLeft, 
+  ChevronRight,
+  CheckCircle,
+  XCircle,
+  Edit,
+  Delete,
+  Eye,
+  Shield,
+  Users,
+  Package,
+  Clock,
+  AlertTriangle,
+  UserCheck,
+  UserX,
+  ChevronDown,
+  RefreshCw,
+  Activity,
+  TrendingUp,
+  Calendar,
+  User,
+  Mail,
+  FileText,
+  Settings,
+  LogIn,
+  LogOut,
+  ShoppingCart,
+  MessageSquare,
+  Star,
+  Flag,
+  Plus,
+  Minus,
+  ExternalLink
+} from 'lucide-react';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
 
@@ -14,6 +53,43 @@ const REJECTION_REASONS = [
   { value: 'other', label: 'Other' },
 ];
 
+const ACTION_ICONS = {
+  'create': Plus,
+  'update': Edit,
+  'delete': Trash2,
+  'approve': CheckCircle,
+  'reject': XCircle,
+  'login': LogIn,
+  'logout': LogOut,
+  'view': Eye,
+  'edit': Edit,
+  'suspend': UserX,
+  'unsuspend': UserCheck,
+  'role_change': Settings,
+  'rental': ShoppingCart,
+  'task': Clock,
+  'review': Star,
+  'report': Flag,
+  'message': MessageSquare,
+};
+
+const ACTION_COLORS = {
+  'create': 'text-green-400 bg-green-500/10',
+  'update': 'text-blue-400 bg-blue-500/10',
+  'delete': 'text-red-400 bg-red-500/10',
+  'approve': 'text-green-400 bg-green-500/10',
+  'reject': 'text-red-400 bg-red-500/10',
+  'login': 'text-purple-400 bg-purple-500/10',
+  'logout': 'text-gray-400 bg-gray-500/10',
+  'view': 'text-cyan-400 bg-cyan-500/10',
+  'suspend': 'text-orange-400 bg-orange-500/10',
+  'unsuspend': 'text-teal-400 bg-teal-500/10',
+  'role_change': 'text-yellow-400 bg-yellow-500/10',
+  'rental': 'text-indigo-400 bg-indigo-500/10',
+  'task': 'text-pink-400 bg-pink-500/10',
+  'default': 'text-gray-400 bg-gray-500/10',
+};
+
 const AdminDashboard = () => {
   const { token, user } = useAuth();
   const [rentals, setRentals] = useState([]);
@@ -21,38 +97,46 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditTotal, setAuditTotal] = useState(0);
+  const [auditStats, setAuditStats] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [queueStats, setQueueStats] = useState(null);
   const [error, setError] = useState('');
   const [toasts, setToasts] = useState([]);
-  const [drawerMode, setDrawerMode] = useState(null); // 'editRental' | 'rejectRental' | 'editTask' | 'rejectTask'
+  const [drawerMode, setDrawerMode] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [editingRental, setEditingRental] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
   const [selectedRentalIds, setSelectedRentalIds] = useState([]);
   const [selectedTaskIds, setSelectedTaskIds] = useState([]);
-  const [rejectDraft, setRejectDraft] = useState(null); // { key, reasonCode, note }
+  const [rejectDraft, setRejectDraft] = useState(null);
   const [rentalQuery, setRentalQuery] = useState('');
   const [taskQuery, setTaskQuery] = useState('');
   const [logFilters, setLogFilters] = useState({
     action: '',
     targetType: '',
+    userRole: '',
+    userId: '',
     q: '',
     from: '',
     to: '',
     limit: DEFAULT_AUDIT_PAGE_SIZE,
     page: 1,
+    includeStudentActions: true,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
   });
   const [savedAuditViews, setSavedAuditViews] = useState([]);
   const [selectedSavedAuditViewId, setSelectedSavedAuditViewId] = useState('');
+  const [activeTab, setActiveTab] = useState('rentals');
+  const [selectedLogDetails, setSelectedLogDetails] = useState(null);
+  const [dateRangePreset, setDateRangePreset] = useState('7d');
 
   const persistSavedAuditViews = (views) => {
     try {
       localStorage.setItem('admin_audit_saved_views', JSON.stringify(views));
-    } catch (err) {
-      // Ignore storage errors
-    }
+    } catch (err) {}
   };
+  
   const [rentalForm, setRentalForm] = useState({
     title: '',
     description: '',
@@ -72,7 +156,7 @@ const AdminDashboard = () => {
   const pushToast = (type, title, message) => {
     const id = String(Date.now() + Math.random());
     setToasts((prev) => [{ id, type, title, message }, ...prev].slice(0, 4));
-    window.setTimeout(() => {
+    setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 3800);
   };
@@ -82,6 +166,7 @@ const AdminDashboard = () => {
     setRejectDraft(null);
     setEditingRental(null);
     setEditingTask(null);
+    setSelectedLogDetails(null);
   };
 
   const authHeaders = useMemo(
@@ -92,6 +177,47 @@ const AdminDashboard = () => {
     [token]
   );
 
+  // Calculate audit stats from logs (client-side fallback)
+  const calculateAuditStats = (logs) => {
+    if (!logs || logs.length === 0) {
+      return {
+        totalActions: 0,
+        uniqueUsers: 0,
+        actionsPerDay: 0,
+        mostActiveHour: 'N/A'
+      };
+    }
+
+    const uniqueUsers = new Set(logs.map(log => log.user?._id).filter(id => id));
+    const actionsByHour = {};
+    
+    logs.forEach(log => {
+      const hour = new Date(log.createdAt).getHours();
+      actionsByHour[hour] = (actionsByHour[hour] || 0) + 1;
+    });
+    
+    let mostActiveHour = 'N/A';
+    let maxActions = 0;
+    for (const [hour, count] of Object.entries(actionsByHour)) {
+      if (count > maxActions) {
+        maxActions = count;
+        mostActiveHour = `${hour}:00`;
+      }
+    }
+    
+    // Calculate average actions per day (based on date range)
+    const dates = logs.map(log => new Date(log.createdAt).toDateString());
+    const uniqueDates = new Set(dates);
+    const actionsPerDay = uniqueDates.size > 0 ? (logs.length / uniqueDates.size).toFixed(1) : 0;
+    
+    return {
+      totalActions: logs.length,
+      uniqueUsers: uniqueUsers.size,
+      actionsPerDay: parseFloat(actionsPerDay),
+      mostActiveHour
+    };
+  };
+
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -101,8 +227,9 @@ const AdminDashboard = () => {
         fetch(`${API_BASE}/admin/users`, { headers: authHeaders }),
         fetch(`${API_BASE}/admin/analytics`, { headers: authHeaders }),
         fetch(`${API_BASE}/admin/queue-stats`, { headers: authHeaders }),
-        fetch(`${API_BASE}/admin/audit-logs?page=1&limit=${DEFAULT_AUDIT_PAGE_SIZE}`, { headers: authHeaders }),
+        fetch(`${API_BASE}/admin/audit-logs?page=1&limit=${DEFAULT_AUDIT_PAGE_SIZE}&includeStudentActions=true`, { headers: authHeaders }),
       ]);
+      
       const [rentalsData, tasksData, usersData, analyticsData, queueData, logsData] = await Promise.all([
         rentalsRes.json(),
         tasksRes.json(),
@@ -111,21 +238,30 @@ const AdminDashboard = () => {
         queueRes.json(),
         logsRes.json(),
       ]);
+      
       if (!rentalsRes.ok || !tasksRes.ok || !usersRes.ok || !analyticsRes.ok || !queueRes.ok || !logsRes.ok) {
         setError(
           rentalsData.message || tasksData.message || usersData.message || logsData.message || 'Failed to load admin data.'
         );
         return;
       }
+      
       setRentals(rentalsData);
       setTasks(tasksData);
       setUsers(usersData);
       setAuditLogs(Array.isArray(logsData?.items) ? logsData.items : []);
       setAuditTotal(Number(logsData?.total) || 0);
+      
+      // Calculate stats from loaded logs (client-side fallback)
+      const calculatedStats = calculateAuditStats(logsData?.items || []);
+      setAuditStats(calculatedStats);
+      
       setAnalytics(analyticsData);
       setQueueStats(queueData);
+      
       setError('');
     } catch (err) {
+      console.error('Error loading data:', err);
       setError('Failed to load admin dashboard.');
     } finally {
       setIsLoading(false);
@@ -135,13 +271,51 @@ const AdminDashboard = () => {
   const loadAuditLogs = useCallback(async (overrideFilters = null) => {
     const f = overrideFilters || logFilters;
     const qs = new URLSearchParams();
+    
+    // Apply date range presets
+    let fromDate = f.from;
+    let toDate = f.to;
+    
+    if (dateRangePreset !== 'custom' && !f.from && !f.to) {
+      const now = new Date();
+      toDate = now.toISOString().split('T')[0];
+      
+      switch(dateRangePreset) {
+        case '24h':
+          const yesterday = new Date(now);
+          yesterday.setDate(yesterday.getDate() - 1);
+          fromDate = yesterday.toISOString().split('T')[0];
+          break;
+        case '7d':
+          const sevenDaysAgo = new Date(now);
+          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+          fromDate = sevenDaysAgo.toISOString().split('T')[0];
+          break;
+        case '30d':
+          const thirtyDaysAgo = new Date(now);
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          fromDate = thirtyDaysAgo.toISOString().split('T')[0];
+          break;
+        case '90d':
+          const ninetyDaysAgo = new Date(now);
+          ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+          fromDate = ninetyDaysAgo.toISOString().split('T')[0];
+          break;
+      }
+    }
+    
     if (f.action) qs.append('action', f.action);
     if (f.targetType) qs.append('targetType', f.targetType);
+    if (f.userRole) qs.append('userRole', f.userRole);
+    if (f.userId) qs.append('userId', f.userId);
     if (f.q) qs.append('q', f.q);
-    if (f.from) qs.append('from', f.from);
-    if (f.to) qs.append('to', f.to);
+    if (fromDate) qs.append('from', fromDate);
+    if (toDate) qs.append('to', toDate);
     qs.append('limit', String(f.limit || DEFAULT_AUDIT_PAGE_SIZE));
     qs.append('page', String(f.page || 1));
+    qs.append('includeStudentActions', String(f.includeStudentActions !== false));
+    qs.append('sortBy', f.sortBy || 'createdAt');
+    qs.append('sortOrder', f.sortOrder || 'desc');
 
     try {
       const res = await fetch(`${API_BASE}/admin/audit-logs?${qs.toString()}`, { headers: authHeaders });
@@ -152,22 +326,30 @@ const AdminDashboard = () => {
       }
       setAuditLogs(Array.isArray(data?.items) ? data.items : []);
       setAuditTotal(Number(data?.total) || 0);
+      
+      // Update stats based on loaded logs
+      const calculatedStats = calculateAuditStats(data?.items || []);
+      setAuditStats(calculatedStats);
+      
       setError('');
     } catch (err) {
+      console.error('Error loading audit logs:', err);
       setError('Failed to load audit logs.');
     }
-  }, [authHeaders, logFilters]);
+  }, [authHeaders, logFilters, dateRangePreset]);
 
   const exportAuditLogsCsv = async () => {
     const f = logFilters;
     const qs = new URLSearchParams();
     if (f.action) qs.append('action', f.action);
     if (f.targetType) qs.append('targetType', f.targetType);
+    if (f.userRole) qs.append('userRole', f.userRole);
+    if (f.userId) qs.append('userId', f.userId);
     if (f.q) qs.append('q', f.q);
     if (f.from) qs.append('from', f.from);
     if (f.to) qs.append('to', f.to);
-    // Export current filter up to a safe cap.
-    qs.append('limit', '1000');
+    qs.append('limit', '5000');
+    qs.append('includeStudentActions', String(f.includeStudentActions !== false));
 
     try {
       const res = await fetch(`${API_BASE}/admin/audit-logs/export?${qs.toString()}`, { headers: authHeaders });
@@ -186,9 +368,11 @@ const AdminDashboard = () => {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      setError('');
+      pushToast('success', 'Export complete', `Exported ${auditTotal} audit logs`);
     } catch (err) {
+      console.error('Export error:', err);
       setError('Export failed.');
+      pushToast('error', 'Export failed', 'Could not export audit logs');
     }
   };
 
@@ -206,9 +390,7 @@ const AdminDashboard = () => {
       if (Array.isArray(parsed)) {
         setSavedAuditViews(parsed);
       }
-    } catch (err) {
-      // Ignore storage errors
-    }
+    } catch (err) {}
   }, []);
 
   const pendingRentals = useMemo(
@@ -225,6 +407,7 @@ const AdminDashboard = () => {
       }),
     [rentals, rentalQuery]
   );
+  
   const pendingTasks = useMemo(
     () =>
       tasks.filter((task) => {
@@ -361,7 +544,7 @@ const AdminDashboard = () => {
 
   const confirmRejectFromDrawer = async () => {
     if (!rejectDraft?.id || !rejectDraft?.reasonCode) return;
-    const type = rejectDraft.type; // 'rentals' | 'tasks'
+    const type = rejectDraft.type;
     try {
       await moderateRequest(type, rejectDraft.id, 'rejected', {
         moderationReasonCode: rejectDraft.reasonCode,
@@ -464,10 +647,13 @@ const AdminDashboard = () => {
       filters: {
         action: logFilters.action,
         targetType: logFilters.targetType,
+        userRole: logFilters.userRole,
+        userId: logFilters.userId,
         q: logFilters.q,
         from: logFilters.from,
         to: logFilters.to,
         limit: logFilters.limit,
+        includeStudentActions: logFilters.includeStudentActions,
       },
     };
 
@@ -475,722 +661,1090 @@ const AdminDashboard = () => {
     setSavedAuditViews(nextViews);
     persistSavedAuditViews(nextViews);
     setSelectedSavedAuditViewId(newView.id);
+    pushToast('success', 'View saved', `"${name}" has been saved`);
   };
 
   const deleteSelectedAuditView = () => {
     if (!selectedSavedAuditViewId) return;
+    const viewToDelete = savedAuditViews.find(v => v.id === selectedSavedAuditViewId);
     const nextViews = savedAuditViews.filter((v) => v.id !== selectedSavedAuditViewId);
     setSavedAuditViews(nextViews);
     persistSavedAuditViews(nextViews);
     setSelectedSavedAuditViewId('');
+    pushToast('success', 'View deleted', `"${viewToDelete?.name}" has been deleted`);
   };
 
   const applySavedAuditView = (view) => {
     const nextFilters = {
       action: view?.filters?.action || '',
       targetType: view?.filters?.targetType || '',
+      userRole: view?.filters?.userRole || '',
+      userId: view?.filters?.userId || '',
       q: view?.filters?.q || '',
       from: view?.filters?.from || '',
       to: view?.filters?.to || '',
       limit: view?.filters?.limit || DEFAULT_AUDIT_PAGE_SIZE,
       page: 1,
+      includeStudentActions: view?.filters?.includeStudentActions !== false,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
     };
     setLogFilters(nextFilters);
     loadAuditLogs(nextFilters);
+    pushToast('success', 'View applied', `Loaded "${view.name}"`);
+  };
+
+  const resetFilters = () => {
+    setLogFilters({
+      action: '',
+      targetType: '',
+      userRole: '',
+      userId: '',
+      q: '',
+      from: '',
+      to: '',
+      limit: DEFAULT_AUDIT_PAGE_SIZE,
+      page: 1,
+      includeStudentActions: true,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    });
+    setDateRangePreset('7d');
+    loadAuditLogs({
+      action: '',
+      targetType: '',
+      userRole: '',
+      userId: '',
+      q: '',
+      from: '',
+      to: '',
+      limit: DEFAULT_AUDIT_PAGE_SIZE,
+      page: 1,
+      includeStudentActions: true,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    });
   };
 
   const auditPageSize = logFilters.limit || DEFAULT_AUDIT_PAGE_SIZE;
   const totalAuditPages = Math.max(Math.ceil(auditTotal / auditPageSize), 1);
 
-  const SkeletonCard = () => (
-    <div className="list-card animate-pulse">
-      <div className="h-4 w-3/5 rounded bg-slate-700" />
-      <div className="h-3 w-4/5 rounded bg-slate-700/80" />
-      <div className="h-3 w-2/3 rounded bg-slate-700/80" />
-      <div className="h-3 w-1/2 rounded bg-slate-700/70" />
-      <div className="h-8 w-full rounded bg-slate-700/20" />
+  const StatCard = ({ icon: Icon, title, value, subtitle, color, trend }) => (
+    <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700 hover:border-gray-600 transition-all">
+      <div className="flex items-center justify-between mb-4">
+        <div className={`p-3 rounded-xl ${color}`}>
+          <Icon className="w-6 h-6" />
+        </div>
+        <span className="text-3xl font-bold text-white">{value}</span>
+      </div>
+      <h3 className="text-gray-400 text-sm font-medium">{title}</h3>
+      {subtitle && <p className="text-gray-500 text-xs mt-1">{subtitle}</p>}
+      {trend && (
+        <div className="flex items-center gap-1 mt-2">
+          <TrendingUp className="w-3 h-3 text-green-400" />
+          <span className="text-xs text-green-400">{trend}</span>
+        </div>
+      )}
     </div>
   );
 
+  const ActionButton = ({ onClick, variant, children, disabled, icon: Icon }) => {
+    const variants = {
+      success: 'bg-green-600 hover:bg-green-700 text-white',
+      danger: 'bg-red-600 hover:bg-red-700 text-white',
+      primary: 'bg-blue-600 hover:bg-blue-700 text-white',
+      warning: 'bg-yellow-600 hover:bg-yellow-700 text-white',
+      ghost: 'bg-gray-700 hover:bg-gray-600 text-gray-300',
+    };
+    return (
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${variants[variant]} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+      >
+        {Icon && <Icon className="w-4 h-4" />}
+        {children}
+      </button>
+    );
+  };
+
+  const SkeletonCard = () => (
+    <div className="bg-gray-800/50 rounded-xl p-6 animate-pulse">
+      <div className="h-4 bg-gray-700 rounded w-3/4 mb-3"></div>
+      <div className="h-3 bg-gray-700 rounded w-1/2 mb-2"></div>
+      <div className="h-3 bg-gray-700 rounded w-2/3"></div>
+    </div>
+  );
+
+  const getActionIcon = (action) => {
+    const lowerAction = action?.toLowerCase() || '';
+    for (const [key, Icon] of Object.entries(ACTION_ICONS)) {
+      if (lowerAction.includes(key)) return Icon;
+    }
+    return Activity;
+  };
+
+  const getActionColor = (action) => {
+    const lowerAction = action?.toLowerCase() || '';
+    for (const [key, colorClass] of Object.entries(ACTION_COLORS)) {
+      if (lowerAction.includes(key)) return colorClass;
+    }
+    return ACTION_COLORS.default;
+  };
+
+  const formatUserInfo = (user) => {
+    if (!user) return 'System';
+    return `${user.name || 'Unknown'} (${user.email || 'No email'})`;
+  };
+
   if (isLoading) {
     return (
-      <div className="module-page-container admin-console">
-        <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-        <p className="module-description">Loading admin console...</p>
-        <div className="module-layout">
-          <section className="module-section admin-panel">
-            <h2>Pending Rentals</h2>
-            <div className="list-grid">
-              {Array.from({ length: 6 }).map((_, idx) => (
-                <SkeletonCard key={idx} />
-              ))}
-            </div>
-          </section>
-          <section className="module-section admin-panel">
-            <h2>Admin Audit Logs</h2>
-            <div className="list-grid">
-              {Array.from({ length: 6 }).map((_, idx) => (
-                <SkeletonCard key={idx} />
-              ))}
-            </div>
-          </section>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">Admin Dashboard</h1>
+          <p className="text-gray-400 mb-8">Loading admin console...</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {Array.from({ length: 4 }).map((_, idx) => (
+              <SkeletonCard key={idx} />
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="module-page-container admin-console">
-      <div className="toast-wrap">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800">
+      {/* Toast Notifications */}
+      <div className="fixed top-4 right-4 z-50 space-y-2">
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`toast ${t.type === 'success' ? 'toast-success' : t.type === 'error' ? 'toast-error' : 'toast-info'}`}
+            className={`px-4 py-3 rounded-lg shadow-lg backdrop-blur-sm border ${
+              t.type === 'success' ? 'bg-green-500/90 border-green-400' :
+              t.type === 'error' ? 'bg-red-500/90 border-red-400' :
+              'bg-blue-500/90 border-blue-400'
+            } text-white min-w-[300px] animate-slide-in`}
           >
-            <div className="toast-header">
-              <div className="toast-title">{t.title}</div>
-            </div>
-            <div className="toast-msg">{t.message}</div>
+            <div className="font-semibold">{t.title}</div>
+            <div className="text-sm opacity-90">{t.message}</div>
           </div>
         ))}
       </div>
-      <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-      <p className="module-description">
-        Approve or reject rentals and micro-tasks before publishing, and manage all user accounts.
-      </p>
-      {error && (
-        <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-          {error}
-        </div>
-      )}
 
-      {analytics && queueStats && (
-        <div className="module-layout" style={{ marginBottom: '1rem' }}>
-          <section className="module-section admin-panel">
-            <h2>Operations Snapshot</h2>
-            <p className="muted">Rentals: pending {analytics.rentals.pending}, approved {analytics.rentals.approved}, rejected {analytics.rentals.rejected}</p>
-            <p className="muted">Tasks: pending {analytics.tasks.pending}, approved {analytics.tasks.approved}, rejected {analytics.tasks.rejected}</p>
-            <p className="muted">Avg moderation time: {(
-              analytics.rentals.avgModerationHours + analytics.tasks.avgModerationHours
-            ) / 2 || 0} hours</p>
-          </section>
-          <section className="module-section admin-panel">
-            <h2>Queue Health</h2>
-            <p className="muted">Stale rentals (7d+ pending): {queueStats.staleRentals}</p>
-            <p className="muted">Stale tasks (7d+ pending): {queueStats.staleTasks}</p>
-            <p className="muted">Recently rejected rentals: {queueStats.recentlyRejectedRentals}</p>
-            <p className="muted">Recently rejected tasks: {queueStats.recentlyRejectedTasks}</p>
-          </section>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            Admin Dashboard
+          </h1>
+          <p className="text-gray-400 mt-2">
+            Manage rentals, tasks, users, and monitor system activity
+          </p>
         </div>
-      )}
 
-      <div className="module-layout">
-        <section className="module-section admin-panel">
-          <h2>Pending Rentals</h2>
-          <input
-            className="admin-input"
-            style={{ marginBottom: '0.75rem', minWidth: '260px' }}
-            value={rentalQuery}
-            placeholder="Search rentals (title/description/category)"
-            onChange={(e) => setRentalQuery(e.target.value)}
-          />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '0.75rem 0' }}>
-            <button
-              type="button"
-              className="small-action success"
-              onClick={() =>
-                bulkModerate('rentals', selectedRentalIds, 'approved')
-              }
-              disabled={!selectedRentalIds.length}
-            >
-              Approve selected
-            </button>
-            <button
-              type="button"
-              className="small-action danger"
-              onClick={() =>
-                bulkModerate('rentals', selectedRentalIds, 'rejected', {
-                  moderationReasonCode: 'other',
-                  moderationNote: 'Bulk reject',
-                })
-              }
-              disabled={!selectedRentalIds.length}
-            >
-              Reject selected
-            </button>
-            <span className="muted small">Selected: {selectedRentalIds.length}</span>
+        {/* Error Alert */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400">
+            {error}
           </div>
-          <div className="hidden md:block">
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ textAlign: 'left', color: '#cbd5f5', fontSize: '0.8rem' }}>
-                    <th style={{ padding: '0.6rem 0.5rem' }}>Select</th>
-                    <th style={{ padding: '0.6rem 0.5rem' }}>Title</th>
-                    <th style={{ padding: '0.6rem 0.5rem' }}>Category</th>
-                    <th style={{ padding: '0.6rem 0.5rem' }}>Rate</th>
-                    <th style={{ padding: '0.6rem 0.5rem' }}>Owner</th>
-                    <th style={{ padding: '0.6rem 0.5rem' }}>Moderation</th>
-                    <th style={{ padding: '0.6rem 0.5rem' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingRentals.length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="muted" style={{ padding: '1rem 0.5rem' }}>
-                        No pending rental items.
-                      </td>
-                    </tr>
+        )}
+
+        {/* Analytics Cards */}
+        {analytics && queueStats && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <StatCard
+              icon={Package}
+              title="Pending Rentals"
+              value={analytics.rentals.pending}
+              color="bg-blue-500/20 text-blue-400"
+            />
+            <StatCard
+              icon={Clock}
+              title="Pending Tasks"
+              value={analytics.tasks.pending}
+              color="bg-purple-500/20 text-purple-400"
+            />
+            <StatCard
+              icon={AlertTriangle}
+              title="Stale Items (7d+)"
+              value={(queueStats.staleRentals || 0) + (queueStats.staleTasks || 0)}
+              subtitle={`${queueStats.staleRentals} rentals, ${queueStats.staleTasks} tasks`}
+              color="bg-yellow-500/20 text-yellow-400"
+            />
+            <StatCard
+              icon={Users}
+              title="Total Users"
+              value={users.length}
+              subtitle="All registered users"
+              color="bg-green-500/20 text-green-400"
+            />
+          </div>
+        )}
+
+        {/* Tab Navigation */}
+        <div className="mb-6 border-b border-gray-700">
+          <div className="flex space-x-4 overflow-x-auto">
+            {[
+              { id: 'rentals', label: 'Rentals', icon: Package, count: pendingRentals.length },
+              { id: 'tasks', label: 'Tasks', icon: Clock, count: pendingTasks.length },
+              { id: 'users', label: 'Users', icon: Users, count: users.length },
+              { id: 'audit', label: 'Audit Logs', icon: Shield, count: auditTotal },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-6 py-3 font-medium transition-all relative whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? 'text-blue-400'
+                    : 'text-gray-400 hover:text-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <tab.icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                  {tab.count > 0 && (
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${
+                      activeTab === tab.id
+                        ? 'bg-blue-500/20 text-blue-400'
+                        : 'bg-gray-700 text-gray-400'
+                    }`}>
+                      {tab.count}
+                    </span>
                   )}
-                  {pendingRentals.map((item) => (
-                    <tr key={item._id} style={{ borderTop: '1px solid rgba(148, 163, 184, 0.18)' }}>
-                      <td style={{ padding: '0.75rem 0.5rem' }}>
+                </div>
+                {activeTab === tab.id && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        <div className="space-y-6">
+          {/* Rentals Tab */}
+          {activeTab === 'rentals' && (
+            <div className="space-y-4">
+              {/* Search and Bulk Actions */}
+              <div className="flex flex-wrap gap-4 items-center justify-between">
+                <div className="flex-1 min-w-[200px] relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+                  <input
+                    type="text"
+                    placeholder="Search rentals..."
+                    value={rentalQuery}
+                    onChange={(e) => setRentalQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <ActionButton
+                    onClick={() => bulkModerate('rentals', selectedRentalIds, 'approved')}
+                    disabled={!selectedRentalIds.length}
+                    variant="success"
+                    icon={CheckCircle}
+                  >
+                    Approve Selected ({selectedRentalIds.length})
+                  </ActionButton>
+                  <ActionButton
+                    onClick={() => bulkModerate('rentals', selectedRentalIds, 'rejected', {
+                      moderationReasonCode: 'other',
+                      moderationNote: 'Bulk reject',
+                    })}
+                    disabled={!selectedRentalIds.length}
+                    variant="danger"
+                    icon={XCircle}
+                  >
+                    Reject Selected
+                  </ActionButton>
+                </div>
+              </div>
+
+              {/* Rentals Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {pendingRentals.map((rental) => (
+                  <div key={rental._id} className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-gray-600 transition-all">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
                         <input
                           type="checkbox"
-                          checked={selectedRentalIds.includes(item._id)}
-                          onChange={() => setSelectedRentalIds((prev) => toggleId(prev, item._id))}
+                          checked={selectedRentalIds.includes(rental._id)}
+                          onChange={() => setSelectedRentalIds((prev) => toggleId(prev, rental._id))}
+                          className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
                         />
-                      </td>
-                      <td style={{ padding: '0.75rem 0.5rem' }}>{item.title}</td>
-                      <td style={{ padding: '0.75rem 0.5rem' }}>{item.category}</td>
-                      <td style={{ padding: '0.75rem 0.5rem' }}>LKR {item.dailyRate}/day</td>
-                      <td style={{ padding: '0.75rem 0.5rem' }}>{item.owner?.name || 'Unknown'}</td>
-                      <td style={{ padding: '0.75rem 0.5rem' }}>{item.moderationStatus}</td>
-                      <td style={{ padding: '0.75rem 0.5rem' }}>
-                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                          <button
-                            type="button"
-                            className="small-action success"
-                            onClick={() => moderate('rentals', item._id, 'approved')}
-                          >
-                            Approve
-                          </button>
-                          <button
-                            type="button"
-                            className="small-action danger"
-                            onClick={() => openRejectRentalDrawer(item)}
-                          >
-                            Reject
-                          </button>
-                          <button
-                            type="button"
-                            className="small-action primary"
-                            onClick={() => openRentalEditor(item)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="small-action ghost"
-                            onClick={() => deleteEntity('rentals', item._id)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="md:hidden">
-            <div className="list-grid">
-              {pendingRentals.map((item) => (
-                <div key={item._id} className="list-card">
-                  <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedRentalIds.includes(item._id)}
-                      onChange={() => setSelectedRentalIds((prev) => toggleId(prev, item._id))}
-                    />
-                    <span className="muted small">Select</span>
-                  </label>
-                  <h3>{item.title}</h3>
-                  <p className="muted">
-                    {item.category} · LKR {item.dailyRate}/day
-                  </p>
-                  <p className="muted small">Owner: {item.owner?.name || 'Unknown'}</p>
-                  <p className="muted small">Moderation: {item.moderationStatus}</p>
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-                    <button type="button" className="small-action success" onClick={() => moderate('rentals', item._id, 'approved')}>
-                      Approve
-                    </button>
-                    <button type="button" className="small-action danger" onClick={() => openRejectRentalDrawer(item)}>
-                      Reject
-                    </button>
-                    <button type="button" className="small-action primary" onClick={() => openRentalEditor(item)}>
-                      Edit
-                    </button>
-                    <button type="button" className="small-action ghost" onClick={() => deleteEntity('rentals', item._id)}>
-                      Delete
-                    </button>
+                        <h3 className="text-lg font-semibold text-white">{rental.title}</h3>
+                      </div>
+                      <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-lg text-xs font-medium">
+                        {rental.moderationStatus}
+                      </span>
+                    </div>
+                    
+                    <p className="text-gray-400 text-sm mb-3 line-clamp-2">{rental.description}</p>
+                    
+                    <div className="flex flex-wrap gap-2 text-xs text-gray-500 mb-4">
+                      <span className="px-2 py-1 bg-gray-700/50 rounded">{rental.category}</span>
+                      <span className="px-2 py-1 bg-gray-700/50 rounded">LKR {rental.dailyRate}/day</span>
+                      <span className="px-2 py-1 bg-gray-700/50 rounded">Owner: {rental.owner?.name || 'Unknown'}</span>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <ActionButton
+                        onClick={() => moderate('rentals', rental._id, 'approved')}
+                        variant="success"
+                        icon={CheckCircle}
+                      >
+                        Approve
+                      </ActionButton>
+                      <ActionButton
+                        onClick={() => openRejectRentalDrawer(rental)}
+                        variant="danger"
+                        icon={XCircle}
+                      >
+                        Reject
+                      </ActionButton>
+                      <ActionButton
+                        onClick={() => openRentalEditor(rental)}
+                        variant="primary"
+                        icon={Edit}
+                      >
+                        Edit
+                      </ActionButton>
+                      <ActionButton
+                        onClick={() => deleteEntity('rentals', rental._id)}
+                        variant="ghost"
+                        icon={Trash2}
+                      >
+                        Delete
+                      </ActionButton>
+                    </div>
                   </div>
+                ))}
+              </div>
+              {pendingRentals.length === 0 && (
+                <div className="text-center py-12">
+                  <Package className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-500">No pending rentals to review</p>
                 </div>
-              ))}
-              {pendingRentals.length === 0 && <p className="muted">No pending rental items.</p>}
+              )}
             </div>
-          </div>
-        </section>
+          )}
 
-        <section className="module-section admin-panel">
-          <h2>Pending Micro-Tasks</h2>
-          <input
-            className="admin-input"
-            style={{ marginBottom: '0.75rem', minWidth: '260px' }}
-            value={taskQuery}
-            placeholder="Search tasks (description/location/category)"
-            onChange={(e) => setTaskQuery(e.target.value)}
-          />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '0.75rem 0' }}>
-            <button
-              type="button"
-              className="small-action success"
-              onClick={() =>
-                bulkModerate('tasks', selectedTaskIds, 'approved')
-              }
-              disabled={!selectedTaskIds.length}
-            >
-              Approve selected
-            </button>
-            <button
-              type="button"
-              className="small-action danger"
-              onClick={() =>
-                bulkModerate('tasks', selectedTaskIds, 'rejected', {
-                  moderationReasonCode: 'other',
-                  moderationNote: 'Bulk reject',
-                })
-              }
-              disabled={!selectedTaskIds.length}
-            >
-              Reject selected
-            </button>
-            <span className="muted small">Selected: {selectedTaskIds.length}</span>
-          </div>
-          <div className="hidden md:block">
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ textAlign: 'left', color: '#cbd5f5', fontSize: '0.8rem' }}>
-                    <th style={{ padding: '0.6rem 0.5rem' }}>Select</th>
-                    <th style={{ padding: '0.6rem 0.5rem' }}>Description</th>
-                    <th style={{ padding: '0.6rem 0.5rem' }}>Category</th>
-                    <th style={{ padding: '0.6rem 0.5rem' }}>Budget</th>
-                    <th style={{ padding: '0.6rem 0.5rem' }}>Location</th>
-                    <th style={{ padding: '0.6rem 0.5rem' }}>Posted by</th>
-                    <th style={{ padding: '0.6rem 0.5rem' }}>Moderation</th>
-                    <th style={{ padding: '0.6rem 0.5rem' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingTasks.length === 0 && (
-                    <tr>
-                      <td colSpan={8} className="muted" style={{ padding: '1rem 0.5rem' }}>
-                        No pending tasks.
-                      </td>
-                    </tr>
-                  )}
-                  {pendingTasks.map((task) => (
-                    <tr key={task._id} style={{ borderTop: '1px solid rgba(148, 163, 184, 0.18)' }}>
-                      <td style={{ padding: '0.75rem 0.5rem' }}>
+          {/* Tasks Tab */}
+          {activeTab === 'tasks' && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-4 items-center justify-between">
+                <div className="flex-1 min-w-[200px] relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+                  <input
+                    type="text"
+                    placeholder="Search tasks..."
+                    value={taskQuery}
+                    onChange={(e) => setTaskQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <ActionButton
+                    onClick={() => bulkModerate('tasks', selectedTaskIds, 'approved')}
+                    disabled={!selectedTaskIds.length}
+                    variant="success"
+                    icon={CheckCircle}
+                  >
+                    Approve Selected ({selectedTaskIds.length})
+                  </ActionButton>
+                  <ActionButton
+                    onClick={() => bulkModerate('tasks', selectedTaskIds, 'rejected', {
+                      moderationReasonCode: 'other',
+                      moderationNote: 'Bulk reject',
+                    })}
+                    disabled={!selectedTaskIds.length}
+                    variant="danger"
+                    icon={XCircle}
+                  >
+                    Reject Selected
+                  </ActionButton>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {pendingTasks.map((task) => (
+                  <div key={task._id} className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-gray-600 transition-all">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
                         <input
                           type="checkbox"
                           checked={selectedTaskIds.includes(task._id)}
                           onChange={() => setSelectedTaskIds((prev) => toggleId(prev, task._id))}
+                          className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
                         />
-                      </td>
-                      <td style={{ padding: '0.75rem 0.5rem' }}>{task.description}</td>
-                      <td style={{ padding: '0.75rem 0.5rem' }}>{task.category}</td>
-                      <td style={{ padding: '0.75rem 0.5rem' }}>LKR {task.budget}</td>
-                      <td style={{ padding: '0.75rem 0.5rem' }}>{task.location}</td>
-                      <td style={{ padding: '0.75rem 0.5rem' }}>{task.creator?.name || 'Unknown'}</td>
-                      <td style={{ padding: '0.75rem 0.5rem' }}>{task.moderationStatus}</td>
-                      <td style={{ padding: '0.75rem 0.5rem' }}>
-                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                          <button
-                            type="button"
-                            className="small-action success"
-                            onClick={() => moderate('tasks', task._id, 'approved')}
-                          >
-                            Approve
-                          </button>
-                          <button
-                            type="button"
-                            className="small-action danger"
-                            onClick={() => openRejectTaskDrawer(task)}
-                          >
-                            Reject
-                          </button>
-                          <button
-                            type="button"
-                            className="small-action primary"
-                            onClick={() => openTaskEditor(task)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="small-action ghost"
-                            onClick={() => deleteEntity('tasks', task._id)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        <h3 className="text-lg font-semibold text-white line-clamp-1">{task.description}</h3>
+                      </div>
+                      <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-lg text-xs font-medium">
+                        {task.moderationStatus}
+                      </span>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2 text-xs text-gray-500 mb-4">
+                      <span className="px-2 py-1 bg-gray-700/50 rounded">{task.category}</span>
+                      <span className="px-2 py-1 bg-gray-700/50 rounded">LKR {task.budget}</span>
+                      <span className="px-2 py-1 bg-gray-700/50 rounded">{task.location}</span>
+                      <span className="px-2 py-1 bg-gray-700/50 rounded">Posted by: {task.creator?.name || 'Unknown'}</span>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <ActionButton
+                        onClick={() => moderate('tasks', task._id, 'approved')}
+                        variant="success"
+                        icon={CheckCircle}
+                      >
+                        Approve
+                      </ActionButton>
+                      <ActionButton
+                        onClick={() => openRejectTaskDrawer(task)}
+                        variant="danger"
+                        icon={XCircle}
+                      >
+                        Reject
+                      </ActionButton>
+                      <ActionButton
+                        onClick={() => openTaskEditor(task)}
+                        variant="primary"
+                        icon={Edit}
+                      >
+                        Edit
+                      </ActionButton>
+                      <ActionButton
+                        onClick={() => deleteEntity('tasks', task._id)}
+                        variant="ghost"
+                        icon={Trash2}
+                      >
+                        Delete
+                      </ActionButton>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {pendingTasks.length === 0 && (
+                <div className="text-center py-12">
+                  <Clock className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-500">No pending tasks to review</p>
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
-          <div className="md:hidden">
-            <div className="list-grid">
-              {pendingTasks.map((task) => (
-                <div key={task._id} className="list-card">
-                  <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedTaskIds.includes(task._id)}
-                      onChange={() => setSelectedTaskIds((prev) => toggleId(prev, task._id))}
-                    />
-                    <span className="muted small">Select</span>
-                  </label>
-                  <h3>{task.description}</h3>
-                  <p className="muted">{task.category} · LKR {task.budget}</p>
-                  <p className="muted small">Posted by: {task.creator?.name || 'Unknown'}</p>
-                  <p className="muted small">Moderation: {task.moderationStatus}</p>
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-                    <button type="button" className="small-action success" onClick={() => moderate('tasks', task._id, 'approved')}>
-                      Approve
-                    </button>
-                    <button type="button" className="small-action danger" onClick={() => openRejectTaskDrawer(task)}>
-                      Reject
-                    </button>
-                    <button type="button" className="small-action primary" onClick={() => openTaskEditor(task)}>
-                      Edit
-                    </button>
-                    <button type="button" className="small-action ghost" onClick={() => deleteEntity('tasks', task._id)}>
-                      Delete
-                    </button>
+          {/* Users Tab */}
+          {activeTab === 'users' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {users.map((targetUser) => (
+                <div key={targetUser._id} className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-gray-600 transition-all">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg">
+                      {targetUser.name?.charAt(0) || 'U'}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-white font-semibold">{targetUser.name}</h3>
+                      <p className="text-gray-400 text-sm">{targetUser.email}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 mb-4">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Role</span>
+                      <span className={`px-2 py-0.5 rounded ${
+                        targetUser.role === 'admin' ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'
+                      }`}>
+                        {targetUser.role}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Trust Score</span>
+                      <span className="text-white">{targetUser.trustScore?.toFixed(1) || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Status</span>
+                      <span className={targetUser.isSuspended ? 'text-red-400' : 'text-green-400'}>
+                        {targetUser.isSuspended ? 'Suspended' : 'Active'}
+                      </span>
+                    </div>
+                    {targetUser.lastLogin && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Last Login</span>
+                        <span className="text-white text-xs">
+                          {new Date(targetUser.lastLogin).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <ActionButton
+                      onClick={() => toggleRole(targetUser)}
+                      variant="primary"
+                    >
+                      Make {targetUser.role === 'admin' ? 'Student' : 'Admin'}
+                    </ActionButton>
+                    <ActionButton
+                      onClick={() => toggleSuspended(targetUser)}
+                      variant={targetUser.isSuspended ? "warning" : "danger"}
+                      icon={targetUser.isSuspended ? UserCheck : UserX}
+                    >
+                      {targetUser.isSuspended ? 'Unsuspend' : 'Suspend'}
+                    </ActionButton>
                   </div>
                 </div>
               ))}
-              {pendingTasks.length === 0 && <p className="muted">No pending tasks.</p>}
             </div>
-          </div>
-        </section>
+          )}
 
-        <section className="module-section admin-panel">
-          <h2>User Management</h2>
-          <div className="list-grid">
-            {users.map((targetUser) => (
-              <div key={targetUser._id} className="list-card">
-                <h3>{targetUser.name}</h3>
-                <p className="muted">{targetUser.email}</p>
-                <p className="muted small">Role: {targetUser.role} · Trust: {targetUser.trustScore?.toFixed(1)}</p>
-                <p className="muted small">Status: {targetUser.isSuspended ? 'Suspended' : 'Active'}</p>
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
-                  <button type="button" className="small-action primary" onClick={() => toggleRole(targetUser)}>
-                    Make {targetUser.role === 'admin' ? 'Student' : 'Admin'}
-                  </button>
-                  <button type="button" className={`small-action ${targetUser.isSuspended ? 'warning' : 'danger'}`} onClick={() => toggleSuspended(targetUser)}>
-                    {targetUser.isSuspended ? 'Unsuspend' : 'Suspend'}
-                  </button>
+          {/* Audit Logs Tab - Completely Redesigned */}
+          {activeTab === 'audit' && (
+            <div className="space-y-6">
+              {/* Audit Statistics Summary */}
+              {auditStats && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-gray-800/30 rounded-xl p-4 border border-gray-700">
+                    <div className="flex items-center justify-between mb-2">
+                      <Activity className="w-5 h-5 text-blue-400" />
+                      <span className="text-2xl font-bold text-white">{auditStats.totalActions || 0}</span>
+                    </div>
+                    <p className="text-xs text-gray-400">Total Actions</p>
+                    <p className="text-xs text-gray-500 mt-1">(current view)</p>
+                  </div>
+                  <div className="bg-gray-800/30 rounded-xl p-4 border border-gray-700">
+                    <div className="flex items-center justify-between mb-2">
+                      <Users className="w-5 h-5 text-green-400" />
+                      <span className="text-2xl font-bold text-white">{auditStats.uniqueUsers || 0}</span>
+                    </div>
+                    <p className="text-xs text-gray-400">Unique Users</p>
+                  </div>
+                  <div className="bg-gray-800/30 rounded-xl p-4 border border-gray-700">
+                    <div className="flex items-center justify-between mb-2">
+                      <TrendingUp className="w-5 h-5 text-purple-400" />
+                      <span className="text-2xl font-bold text-white">
+                        {auditStats.actionsPerDay || 0}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400">Actions per Day (avg)</p>
+                  </div>
+                  <div className="bg-gray-800/30 rounded-xl p-4 border border-gray-700">
+                    <div className="flex items-center justify-between mb-2">
+                      <Clock className="w-5 h-5 text-yellow-400" />
+                      <span className="text-2xl font-bold text-white">
+                        {auditStats.mostActiveHour || 'N/A'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400">Peak Activity Hour</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Advanced Filters */}
+              <div className="bg-gray-800/30 rounded-xl p-5 border border-gray-700">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-white font-semibold flex items-center gap-2">
+                    <Filter className="w-4 h-4" />
+                    Advanced Filters
+                  </h3>
+                  <div className="flex gap-2">
+                    <ActionButton onClick={resetFilters} variant="ghost" icon={RefreshCw}>
+                      Reset
+                    </ActionButton>
+                    <ActionButton onClick={saveCurrentAuditView} variant="primary" icon={Save}>
+                      Save View
+                    </ActionButton>
+                    <ActionButton onClick={exportAuditLogsCsv} variant="success" icon={Download}>
+                      Export CSV
+                    </ActionButton>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* Saved Views Dropdown */}
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Saved Views</label>
+                    <select
+                      value={selectedSavedAuditViewId}
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        setSelectedSavedAuditViewId(id);
+                        const view = savedAuditViews.find((v) => v.id === id);
+                        if (view) applySavedAuditView(view);
+                      }}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="">Custom filters</option>
+                      {savedAuditViews.map((v) => (
+                        <option key={v.id} value={v.id}>{v.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Search */}
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Search</label>
+                    <input
+                      type="text"
+                      placeholder="Search by user, action, target..."
+                      value={logFilters.q}
+                      onChange={(e) => setLogFilters((prev) => ({ ...prev, q: e.target.value }))}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  {/* Action Type */}
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Action Type</label>
+                    <select
+                      value={logFilters.action}
+                      onChange={(e) => setLogFilters((prev) => ({ ...prev, action: e.target.value }))}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="">All actions</option>
+                      <option value="create">Create</option>
+                      <option value="update">Update</option>
+                      <option value="delete">Delete</option>
+                      <option value="approve">Approve</option>
+                      <option value="reject">Reject</option>
+                      <option value="login">Login</option>
+                      <option value="logout">Logout</option>
+                      <option value="suspend">Suspend</option>
+                      <option value="unsuspend">Unsuspend</option>
+                      <option value="role_change">Role Change</option>
+                    </select>
+                  </div>
+
+                  {/* Target Type */}
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Target Type</label>
+                    <select
+                      value={logFilters.targetType}
+                      onChange={(e) => setLogFilters((prev) => ({ ...prev, targetType: e.target.value }))}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="">All types</option>
+                      <option value="rental">Rental</option>
+                      <option value="task">Task</option>
+                      <option value="user">User</option>
+                      <option value="review">Review</option>
+                      <option value="message">Message</option>
+                    </select>
+                  </div>
+
+                  {/* User Role */}
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">User Role</label>
+                    <select
+                      value={logFilters.userRole}
+                      onChange={(e) => setLogFilters((prev) => ({ ...prev, userRole: e.target.value }))}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="">All roles</option>
+                      <option value="admin">Admin</option>
+                      <option value="student">Student</option>
+                    </select>
+                  </div>
+
+                  {/* Date Range Preset */}
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Date Range</label>
+                    <select
+                      value={dateRangePreset}
+                      onChange={(e) => {
+                        setDateRangePreset(e.target.value);
+                        if (e.target.value !== 'custom') {
+                          setLogFilters(prev => ({ ...prev, from: '', to: '' }));
+                        }
+                      }}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="24h">Last 24 hours</option>
+                      <option value="7d">Last 7 days</option>
+                      <option value="30d">Last 30 days</option>
+                      <option value="90d">Last 90 days</option>
+                      <option value="custom">Custom range</option>
+                    </select>
+                  </div>
+
+                  {/* Custom Date Range */}
+                  {dateRangePreset === 'custom' && (
+                    <>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">From Date</label>
+                        <input
+                          type="date"
+                          value={logFilters.from}
+                          onChange={(e) => setLogFilters((prev) => ({ ...prev, from: e.target.value }))}
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">To Date</label>
+                        <input
+                          type="date"
+                          value={logFilters.to}
+                          onChange={(e) => setLogFilters((prev) => ({ ...prev, to: e.target.value }))}
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Include Student Actions */}
+                  <div className="flex items-center">
+                    <label className="flex items-center gap-2 text-white cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={logFilters.includeStudentActions}
+                        onChange={(e) => setLogFilters((prev) => ({ ...prev, includeStudentActions: e.target.checked }))}
+                        className="rounded border-gray-600 bg-gray-700 text-blue-600"
+                      />
+                      <span className="text-sm">Include student actions</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Apply Filters Button */}
+                <div className="mt-4">
+                  <ActionButton onClick={() => {
+                    const nextFilters = { ...logFilters, page: 1 };
+                    setLogFilters(nextFilters);
+                    loadAuditLogs(nextFilters);
+                  }} variant="primary" icon={Search}>
+                    Apply Filters
+                  </ActionButton>
                 </div>
               </div>
-            ))}
-          </div>
-        </section>
 
-        <section className="module-section admin-panel">
-          <h2>Admin Audit Logs</h2>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.75rem' }}>
-            <select
-              value={selectedSavedAuditViewId}
-              onChange={(e) => {
-                const id = e.target.value;
-                setSelectedSavedAuditViewId(id);
-                const view = savedAuditViews.find((v) => v.id === id);
-                if (view) applySavedAuditView(view);
-              }}
-              className="admin-input"
-            >
-              <option value="">Custom filters</option>
-              {savedAuditViews.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name}
-                </option>
-              ))}
-            </select>
-            <input
-              className="admin-input"
-              style={{ minWidth: '260px' }}
-              value={logFilters.q}
-              placeholder="Search action / target type"
-              onChange={(e) => setLogFilters((prev) => ({ ...prev, q: e.target.value }))}
-            />
-            <select
-              value={logFilters.targetType}
-              onChange={(e) => setLogFilters((prev) => ({ ...prev, targetType: e.target.value }))}
-              className="admin-input"
-            >
-              <option value="">All target types</option>
-              <option value="rental">rental</option>
-              <option value="task">task</option>
-              <option value="user">user</option>
-            </select>
-            <input
-              type="date"
-              value={logFilters.from}
-              onChange={(e) => setLogFilters((prev) => ({ ...prev, from: e.target.value }))}
-              className="admin-input"
-            />
-            <input
-              type="date"
-              value={logFilters.to}
-              onChange={(e) => setLogFilters((prev) => ({ ...prev, to: e.target.value }))}
-              className="admin-input"
-            />
-            <button
-              type="button"
-              className="small-action primary"
-              onClick={() => {
-                const nextFilters = { ...logFilters, page: 1 };
-                setLogFilters(nextFilters);
-                loadAuditLogs(nextFilters);
-              }}
-            >
-              Apply
-            </button>
-            <button type="button" className="small-action ghost" onClick={saveCurrentAuditView}>
-              Save view
-            </button>
-            <button type="button" className="small-action danger" onClick={deleteSelectedAuditView} disabled={!selectedSavedAuditViewId}>
-              Delete view
-            </button>
-            <button type="button" className="small-action success" onClick={exportAuditLogsCsv}>
-              Export CSV
-            </button>
-            <button
-              type="button"
-              className="small-action ghost"
-              onClick={() =>
-                setLogFilters({
-                  action: '',
-                  targetType: '',
-                  q: '',
-                  from: '',
-                  to: '',
-                  limit: DEFAULT_AUDIT_PAGE_SIZE,
-                  page: 1,
-                })
-              }
-            >
-              Reset
-            </button>
-          </div>
-          <div className="list-grid">
-            {auditLogs.map((log) => (
-              <div key={log._id} className="list-card">
-                <h3>{log.action}</h3>
-                <p className="muted small">Admin: {log.admin?.name || 'Unknown'} ({log.admin?.email || 'No email'})</p>
-                <p className="muted small">Target: {log.targetType} · {log.targetId}</p>
-                <p className="muted small">{new Date(log.createdAt).toLocaleString()}</p>
-                {(log.details?.before || log.details?.after) && (
-                  <details style={{ marginTop: '0.75rem' }}>
-                    <summary className="muted small" style={{ cursor: 'pointer' }}>
-                      View diff
-                    </summary>
-                    <div style={{ marginTop: '0.5rem' }}>
-                      <p className="muted small" style={{ marginBottom: '0.25rem' }}>Before</p>
-                      <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                        {JSON.stringify(log.details?.before || null, null, 2)}
-                      </pre>
-                      <p className="muted small" style={{ margin: '0.75rem 0 0.25rem' }}>After</p>
-                      <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                        {JSON.stringify(log.details?.after || null, null, 2)}
-                      </pre>
+              {/* Audit Logs List */}
+              <div className="space-y-3">
+                {auditLogs.map((log) => {
+                  const ActionIcon = getActionIcon(log.action);
+                  const actionColorClass = getActionColor(log.action);
+                  
+                  return (
+                    <div 
+                      key={log._id} 
+                      className="bg-gray-800/30 rounded-xl p-5 border border-gray-700 hover:border-gray-600 transition-all cursor-pointer"
+                      onClick={() => setSelectedLogDetails(selectedLogDetails === log._id ? null : log._id)}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        {/* Left side - Action and User */}
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className={`p-2 rounded-lg ${actionColorClass}`}>
+                            <ActionIcon className="w-5 h-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              <span className={`px-2 py-1 rounded-lg text-xs font-medium ${actionColorClass}`}>
+                                {log.action?.toUpperCase() || 'ACTION'}
+                              </span>
+                              <span className="text-xs text-gray-500">•</span>
+                              <span className="text-xs text-gray-400">{log.targetType}</span>
+                              {log.user?.role === 'admin' && (
+                                <span className="px-2 py-0.5 rounded-full text-xs bg-purple-500/20 text-purple-400">
+                                  Admin
+                                </span>
+                              )}
+                              {log.user?.role === 'student' && (
+                                <span className="px-2 py-0.5 rounded-full text-xs bg-blue-500/20 text-blue-400">
+                                  Student
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-300 font-mono mb-1 break-all">
+                              Target: {log.targetId}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                              <User className="w-3 h-3" />
+                              <span>{formatUserInfo(log.user)}</span>
+                              <Calendar className="w-3 h-3 ml-2" />
+                              <span>{new Date(log.createdAt).toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Right side - View details indicator */}
+                        <div className="text-xs text-blue-400 hover:text-blue-300">
+                          {selectedLogDetails === log._id ? 'Hide details ▲' : 'View details ▼'}
+                        </div>
+                      </div>
+                      
+                      {/* Expanded Details */}
+                      {selectedLogDetails === log._id && (
+                        <div className="mt-4 pt-4 border-t border-gray-700 space-y-3">
+                          {/* IP Address and User Agent */}
+                          {(log.ipAddress || log.userAgent) && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                              {log.ipAddress && (
+                                <div>
+                                  <p className="text-gray-500 mb-1">IP Address</p>
+                                  <p className="text-gray-300 font-mono">{log.ipAddress}</p>
+                                </div>
+                              )}
+                              {log.userAgent && (
+                                <div>
+                                  <p className="text-gray-500 mb-1">User Agent</p>
+                                  <p className="text-gray-300 text-xs break-all">{log.userAgent}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Changes */}
+                          {(log.details?.before || log.details?.after) && (
+                            <div>
+                              <p className="text-xs text-gray-500 mb-2 font-semibold">Changes:</p>
+                              <div className="space-y-2">
+                                {log.details?.before && (
+                                  <div>
+                                    <p className="text-xs text-red-400 mb-1">Before:</p>
+                                    <pre className="text-xs bg-gray-900/50 p-2 rounded overflow-x-auto border border-gray-700">
+                                      {JSON.stringify(log.details.before, null, 2)}
+                                    </pre>
+                                  </div>
+                                )}
+                                {log.details?.after && (
+                                  <div>
+                                    <p className="text-xs text-green-400 mb-1">After:</p>
+                                    <pre className="text-xs bg-gray-900/50 p-2 rounded overflow-x-auto border border-gray-700">
+                                      {JSON.stringify(log.details.after, null, 2)}
+                                    </pre>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Additional Details */}
+                          {log.details?.reason && (
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Reason:</p>
+                              <p className="text-xs text-gray-300">{log.details.reason}</p>
+                            </div>
+                          )}
+                          
+                          {/* Metadata */}
+                          <div className="text-xs text-gray-500">
+                            <p>Log ID: {log._id}</p>
+                            <p>Created: {new Date(log.createdAt).toLocaleString()}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </details>
-                )}
+                  );
+                })}
               </div>
-            ))}
-            {auditLogs.length === 0 && <p className="muted">No admin activity logged yet.</p>}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem' }}>
-            <button
-              type="button"
-              className="small-action ghost"
-              disabled={(logFilters.page || 1) <= 1}
-              onClick={() => {
-                const nextPage = Math.max((logFilters.page || 1) - 1, 1);
-                const nextFilters = { ...logFilters, page: nextPage };
-                setLogFilters(nextFilters);
-                loadAuditLogs(nextFilters);
-              }}
-            >
-              Prev
-            </button>
-            <span className="muted small">
-              Page {logFilters.page || 1} / {totalAuditPages} · Total {auditTotal}
-            </span>
-            <button
-              type="button"
-              className="small-action ghost"
-              disabled={(logFilters.page || 1) >= totalAuditPages}
-              onClick={() => {
-                const nextPage = Math.min((logFilters.page || 1) + 1, totalAuditPages);
-                const nextFilters = { ...logFilters, page: nextPage };
-                setLogFilters(nextFilters);
-                loadAuditLogs(nextFilters);
-              }}
-            >
-              Next
-            </button>
-          </div>
-        </section>
+              
+              {/* Empty State */}
+              {auditLogs.length === 0 && (
+                <div className="text-center py-12">
+                  <Shield className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-500">No audit logs found</p>
+                  <p className="text-gray-600 text-sm mt-2">Try adjusting your filters</p>
+                </div>
+              )}
+              
+              {/* Pagination */}
+              {auditTotal > 0 && (
+                <div className="flex items-center justify-between pt-4">
+                  <div className="flex items-center gap-4">
+                    <ActionButton
+                      onClick={() => {
+                        const nextPage = Math.max((logFilters.page || 1) - 1, 1);
+                        const nextFilters = { ...logFilters, page: nextPage };
+                        setLogFilters(nextFilters);
+                        loadAuditLogs(nextFilters);
+                      }}
+                      disabled={(logFilters.page || 1) <= 1}
+                      variant="ghost"
+                      icon={ChevronLeft}
+                    >
+                      Previous
+                    </ActionButton>
+                    <ActionButton
+                      onClick={() => {
+                        const nextPage = Math.min((logFilters.page || 1) + 1, totalAuditPages);
+                        const nextFilters = { ...logFilters, page: nextPage };
+                        setLogFilters(nextFilters);
+                        loadAuditLogs(nextFilters);
+                      }}
+                      disabled={(logFilters.page || 1) >= totalAuditPages}
+                      variant="ghost"
+                      icon={ChevronRight}
+                    >
+                      Next
+                    </ActionButton>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <select
+                      value={logFilters.limit}
+                      onChange={(e) => {
+                        const newLimit = Number(e.target.value);
+                        const nextFilters = { ...logFilters, limit: newLimit, page: 1 };
+                        setLogFilters(nextFilters);
+                        loadAuditLogs(nextFilters);
+                      }}
+                      className="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-white text-sm"
+                    >
+                      <option value={25}>25 per page</option>
+                      <option value={50}>50 per page</option>
+                      <option value={100}>100 per page</option>
+                    </select>
+                    <span className="text-sm text-gray-400">
+                      Page {logFilters.page || 1} of {totalAuditPages} • {auditTotal} total
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Drawer Overlay */}
       {drawerMode && (
         <div
-          className="drawer-overlay"
-          onMouseDown={(e) => {
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={(e) => {
             if (e.target === e.currentTarget) closeDrawer();
           }}
         >
-          <div className="drawer-panel">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
-              <div>
-                <h2 className="text-xl font-bold" style={{ marginBottom: '0.25rem' }}>
-                  {drawerMode === 'editRental' && 'Edit Rental'}
-                  {drawerMode === 'rejectRental' && 'Reject Rental'}
-                  {drawerMode === 'editTask' && 'Edit Micro-Task'}
-                  {drawerMode === 'rejectTask' && 'Reject Micro-Task'}
-                </h2>
-                <p className="muted small">
-                  {drawerMode === 'editRental' && `ID: ${editingRental || ''}`}
-                  {drawerMode === 'editTask' && `ID: ${editingTask || ''}`}
-                  {drawerMode === 'rejectRental' && `ID: ${rejectDraft?.id || ''}`}
-                  {drawerMode === 'rejectTask' && `ID: ${rejectDraft?.id || ''}`}
-                </p>
-              </div>
-              <button type="button" className="small-action ghost" onClick={closeDrawer}>
-                Close
+          <div className="bg-gray-800 rounded-2xl w-full max-w-lg p-6 border border-gray-700 shadow-2xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-white">
+                {drawerMode === 'editRental' && 'Edit Rental'}
+                {drawerMode === 'rejectRental' && 'Reject Rental'}
+                {drawerMode === 'editTask' && 'Edit Micro-Task'}
+                {drawerMode === 'rejectTask' && 'Reject Micro-Task'}
+              </h2>
+              <button onClick={closeDrawer} className="text-gray-400 hover:text-white">
+                ✕
               </button>
             </div>
-
+            
+            <p className="text-xs text-gray-500 mb-4 font-mono">
+              ID: {editingRental || editingTask || rejectDraft?.id || ''}
+            </p>
+            
+            {/* Edit Rental Form */}
             {drawerMode === 'editRental' && (
-              <div className="module-form" style={{ marginTop: '1rem' }}>
-                <label>
-                  Title
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Title</label>
                   <input
                     value={rentalForm.title}
                     onChange={(e) => setRentalForm((prev) => ({ ...prev, title: e.target.value }))}
-                    placeholder="Title"
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   />
-                </label>
-                <label>
-                  Description
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Description</label>
                   <textarea
                     value={rentalForm.description}
                     onChange={(e) => setRentalForm((prev) => ({ ...prev, description: e.target.value }))}
-                    placeholder="Description"
+                    rows={3}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   />
-                </label>
-                <label>
-                  Category
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Category</label>
                   <select
                     value={rentalForm.category}
                     onChange={(e) => setRentalForm((prev) => ({ ...prev, category: e.target.value }))}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   >
                     <option value="Electronics">Electronics</option>
                     <option value="Lab Gear">Lab Gear</option>
                     <option value="Sports">Sports</option>
                     <option value="Other">Other</option>
                   </select>
-                </label>
-                <label>
-                  Daily Rate
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Daily Rate (LKR)</label>
                   <input
                     type="number"
                     min="0"
                     value={rentalForm.dailyRate}
                     onChange={(e) => setRentalForm((prev) => ({ ...prev, dailyRate: e.target.value }))}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   />
-                </label>
-                <label style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>Active</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-300">Active</label>
                   <input
                     type="checkbox"
                     checked={rentalForm.isActive}
                     onChange={(e) => setRentalForm((prev) => ({ ...prev, isActive: e.target.checked }))}
-                    style={{ marginLeft: '0.75rem' }}
+                    className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-600"
                   />
-                </label>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button type="button" onClick={() => submitRentalEdit(editingRental)}>
-                    Save changes
-                  </button>
-                  <button type="button" onClick={closeDrawer}>
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <ActionButton onClick={() => submitRentalEdit(editingRental)} variant="success">
+                    Save Changes
+                  </ActionButton>
+                  <ActionButton onClick={closeDrawer} variant="ghost">
                     Cancel
-                  </button>
+                  </ActionButton>
                 </div>
               </div>
             )}
-
-            {drawerMode === 'rejectRental' && (
-              <div className="module-form" style={{ marginTop: '1rem' }}>
-                <label>
-                  Reject reason
+            
+            {/* Reject Forms */}
+            {(drawerMode === 'rejectRental' || drawerMode === 'rejectTask') && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Rejection Reason</label>
                   <select
                     value={rejectDraft?.reasonCode || 'other'}
-                    onChange={(e) =>
-                      setRejectDraft((prev) => ({ ...(prev || {}), reasonCode: e.target.value }))
-                    }
+                    onChange={(e) => setRejectDraft((prev) => ({ ...(prev || {}), reasonCode: e.target.value }))}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   >
                     {REJECTION_REASONS.map((r) => (
-                      <option key={r.value} value={r.value}>
-                        {r.label}
-                      </option>
+                      <option key={r.value} value={r.value}>{r.label}</option>
                     ))}
                   </select>
-                </label>
-                <label>
-                  Note (optional)
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Note (Optional)</label>
                   <textarea
                     value={rejectDraft?.note || ''}
                     onChange={(e) => setRejectDraft((prev) => ({ ...(prev || {}), note: e.target.value }))}
-                    placeholder="Short reason for student"
+                    rows={3}
+                    placeholder="Add a note for the user..."
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
                   />
-                </label>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button type="button" onClick={confirmRejectFromDrawer}>
-                    Confirm reject
-                  </button>
-                  <button type="button" onClick={closeDrawer}>
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <ActionButton onClick={confirmRejectFromDrawer} variant="danger">
+                    Confirm Rejection
+                  </ActionButton>
+                  <ActionButton onClick={closeDrawer} variant="ghost">
                     Cancel
-                  </button>
+                  </ActionButton>
                 </div>
               </div>
             )}
-
+            
+            {/* Edit Task Form */}
             {drawerMode === 'editTask' && (
-              <div className="module-form" style={{ marginTop: '1rem' }}>
-                <label>
-                  Description
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Description</label>
                   <textarea
                     value={taskForm.description}
                     onChange={(e) => setTaskForm((prev) => ({ ...prev, description: e.target.value }))}
-                    placeholder="Description"
+                    rows={3}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   />
-                </label>
-                <label>
-                  Category
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Category</label>
                   <select
                     value={taskForm.category}
                     onChange={(e) => setTaskForm((prev) => ({ ...prev, category: e.target.value }))}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   >
                     <option value="Delivery">Delivery</option>
                     <option value="Cleaning">Cleaning</option>
@@ -1198,87 +1752,54 @@ const AdminDashboard = () => {
                     <option value="Technical">Technical</option>
                     <option value="Other">Other</option>
                   </select>
-                </label>
-                <label>
-                  Budget
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Budget (LKR)</label>
                   <input
                     type="number"
                     min="0"
                     value={taskForm.budget}
                     onChange={(e) => setTaskForm((prev) => ({ ...prev, budget: e.target.value }))}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   />
-                </label>
-                <label>
-                  Deadline
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Deadline</label>
                   <input
                     type="datetime-local"
                     value={taskForm.deadline}
                     onChange={(e) => setTaskForm((prev) => ({ ...prev, deadline: e.target.value }))}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   />
-                </label>
-                <label>
-                  Location
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Location</label>
                   <input
                     value={taskForm.location}
                     onChange={(e) => setTaskForm((prev) => ({ ...prev, location: e.target.value }))}
-                    placeholder="e.g. Main Library, Lab 3B"
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   />
-                </label>
-                <label>
-                  Status
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Status</label>
                   <select
                     value={taskForm.status}
                     onChange={(e) => setTaskForm((prev) => ({ ...prev, status: e.target.value }))}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   >
                     <option value="Pending">Pending</option>
                     <option value="In Progress">In Progress</option>
                     <option value="Completed">Completed</option>
                     <option value="Cancelled">Cancelled</option>
                   </select>
-                </label>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button type="button" onClick={() => submitTaskEdit(editingTask)}>
-                    Save changes
-                  </button>
-                  <button type="button" onClick={closeDrawer}>
-                    Cancel
-                  </button>
                 </div>
-              </div>
-            )}
-
-            {drawerMode === 'rejectTask' && (
-              <div className="module-form" style={{ marginTop: '1rem' }}>
-                <label>
-                  Reject reason
-                  <select
-                    value={rejectDraft?.reasonCode || 'other'}
-                    onChange={(e) =>
-                      setRejectDraft((prev) => ({ ...(prev || {}), reasonCode: e.target.value }))
-                    }
-                  >
-                    {REJECTION_REASONS.map((r) => (
-                      <option key={r.value} value={r.value}>
-                        {r.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Note (optional)
-                  <textarea
-                    value={rejectDraft?.note || ''}
-                    onChange={(e) => setRejectDraft((prev) => ({ ...(prev || {}), note: e.target.value }))}
-                    placeholder="Short reason for student"
-                  />
-                </label>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button type="button" onClick={confirmRejectFromDrawer}>
-                    Confirm reject
-                  </button>
-                  <button type="button" onClick={closeDrawer}>
+                <div className="flex gap-3 pt-4">
+                  <ActionButton onClick={() => submitTaskEdit(editingTask)} variant="success">
+                    Save Changes
+                  </ActionButton>
+                  <ActionButton onClick={closeDrawer} variant="ghost">
                     Cancel
-                  </button>
+                  </ActionButton>
                 </div>
               </div>
             )}
