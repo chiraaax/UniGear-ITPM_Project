@@ -144,6 +144,9 @@ exports.getTaskById = async (req, res) => {
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
+    if (task.moderationStatus !== 'approved') {
+      return res.status(404).json({ message: 'Task not found' });
+    }
 
     res.json(task);
   } catch (err) {
