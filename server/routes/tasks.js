@@ -5,11 +5,13 @@ const Transaction = require('../models/Transaction');
 const Notification = require('../models/Notification');
 const auth = require('../middleware/auth');
 const requireMinTrustScore = require('../middleware/trustCheck');
-const { deleteTask } = require('../controllers/taskController');
+const { deleteTask, getTaskById, acceptTask, updateStatus } = require('../controllers/taskController');
 
 const router = express.Router();
-<Route path="/edit-task/:id" element={<EditTask />} />
-router.put('/:id', auth, updateTask);
+const TASK_CATEGORIES = ['Delivery', 'Cleaning', 'Academic', 'Technical', 'Other'];
+const TASK_STATUSES = ['Pending', 'In Progress', 'Completed', 'Cancelled'];
+const isNonEmptyString = (value, min, max) =>
+  typeof value === 'string' && value.trim().length >= min && value.trim().length <= max;
 
 // CREATE task (subject to TrustScore rule)
 router.post('/', auth, requireMinTrustScore(2.0), async (req, res, next) => {
@@ -18,18 +20,34 @@ router.post('/', auth, requireMinTrustScore(2.0), async (req, res, next) => {
     const { description, budget, deadline, location, category } = req.body;
     console.log('Extracted category:', category); // Debug log
 
-    // Validate required fields
-    if (!category || category.trim() === '') {
-      return res.status(400).json({ message: 'Category is required' });
+    if (!isNonEmptyString(description, 5, 500)) {
+      return res.status(400).json({ message: 'Description must be 5-500 characters.' });
+    }
+    if (!TASK_CATEGORIES.includes(category)) {
+      return res.status(400).json({ message: 'Invalid category.' });
+    }
+    if (Number.isNaN(Number(budget)) || Number(budget) < 0) {
+      return res.status(400).json({ message: 'Budget must be a positive number.' });
+    }
+    if (!isNonEmptyString(location, 2, 150)) {
+      return res.status(400).json({ message: 'Location must be 2-150 characters.' });
+    }
+    const parsedDeadline = new Date(deadline);
+    if (Number.isNaN(parsedDeadline.getTime())) {
+      return res.status(400).json({ message: 'Invalid deadline.' });
+    }
+    if (parsedDeadline <= new Date()) {
+      return res.status(400).json({ message: 'Deadline must be in the future.' });
     }
 
     const task = await Task.create({
       creator: req.user._id,
       description: description.trim(),
-      budget,
-      deadline,
+      budget: Number(budget),
+      deadline: parsedDeadline,
       location: location.trim(),
       category: category.trim(),
+      moderationStatus: 'pending',
     });
     res.status(201).json(task);
   } catch (err) {
@@ -42,7 +60,7 @@ router.post('/', auth, requireMinTrustScore(2.0), async (req, res, next) => {
 router.get('/', async (req, res, next) => {
   try {
     const { search, category, status } = req.query;
-    let query = {};
+    let query = { moderationStatus: 'approved' };
 
     if (search) {
       query.description = { $regex: search, $options: 'i' };
@@ -54,9 +72,10 @@ router.get('/', async (req, res, next) => {
 
     if (status && status !== 'All') {
       const statusMapping = {
-        pending: 'Open',
-        inprogress: 'Assigned',
+        pending: 'Pending',
+        inprogress: 'In Progress',
         completed: 'Completed',
+        cancelled: 'Cancelled',
       };
       query.status = statusMapping[status] || status;
     }
@@ -91,8 +110,8 @@ router.patch('/:id', auth, async (req, res, next) => {
     if (!task.creator.equals(req.user._id)) {
       return res.status(403).json({ message: 'You can only edit your own tasks.' });
     }
-
-    if (task.status !== 'Open') {
+console.log('Current task status:', task.status); // Debug log
+    if (task.status !== 'Pending') {
       return res.status(400).json({
         message: 'Task cannot be edited once an offer has been accepted.',
       });
@@ -104,6 +123,38 @@ router.patch('/:id', auth, async (req, res, next) => {
         task[field] = req.body[field];
       }
     });
+    if (req.body.description !== undefined && !isNonEmptyString(req.body.description, 5, 500)) {
+      return res.status(400).json({ message: 'Description must be 5-500 characters.' });
+    }
+    if (req.body.category !== undefined && !TASK_CATEGORIES.includes(req.body.category)) {
+      return res.status(400).json({ message: 'Invalid category.' });
+    }
+    if (req.body.budget !== undefined && (Number.isNaN(Number(req.body.budget)) || Number(req.body.budget) < 0)) {
+      return res.status(400).json({ message: 'Budget must be a positive number.' });
+    }
+    if (req.body.location !== undefined && !isNonEmptyString(req.body.location, 2, 150)) {
+      return res.status(400).json({ message: 'Location must be 2-150 characters.' });
+    }
+    if (req.body.deadline !== undefined) {
+      const parsed = new Date(req.body.deadline);
+      if (Number.isNaN(parsed.getTime())) {
+        return res.status(400).json({ message: 'Invalid deadline.' });
+      }
+      task.deadline = parsed;
+    }
+    if (req.body.description !== undefined) {
+      task.description = req.body.description.trim();
+    }
+    if (req.body.location !== undefined) {
+      task.location = req.body.location.trim();
+    }
+    if (req.body.budget !== undefined) {
+      task.budget = Number(req.body.budget);
+    }
+    task.moderationStatus = 'pending';
+    task.moderationNote = '';
+    task.moderatedBy = null;
+    task.moderatedAt = null;
 
     await task.save();
     res.json(task);
@@ -124,7 +175,7 @@ router.delete('/:id', auth, async (req, res, next) => {
       return res.status(403).json({ message: 'You can only delete your own tasks.' });
     }
 
-    if (task.status !== 'Open') {
+    if (task.status !== 'Pending') {
       return res.status(400).json({
         message: 'Task cannot be deleted once an offer has been accepted.',
       });
@@ -146,7 +197,7 @@ router.post('/:id/offers', auth, async (req, res, next) => {
       return res.status(404).json({ message: 'Task not found' });
     }
 
-    if (task.status !== 'Open') {
+    if (task.status !== 'Pending') {
       return res.status(400).json({ message: 'Task is not open for new offers.' });
     }
 
@@ -194,6 +245,39 @@ router.get('/:id/offers', auth, async (req, res, next) => {
 
 router.delete('/:id', auth, deleteTask);
 
+// UPDATE TASK STATUS
+router.put('/status/:id', auth, async (req, res, next) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Check if user can update this task (for now, allow anyone, but in real app might restrict)
+    const { status } = req.body;
+
+    // Map frontend status to backend status
+    const statusMapping = {
+      'Pending': 'Pending',
+      'In Progress': 'In Progress',
+      'Completed': 'Completed',
+      'Cancelled': 'Cancelled'
+    };
+
+    const backendStatus = statusMapping[status] || status;
+    if (!TASK_STATUSES.includes(backendStatus)) {
+      return res.status(400).json({ message: 'Invalid status.' });
+    }
+    task.status = backendStatus;
+
+    await task.save();
+    res.json(task);
+  } catch (err) {
+    console.error('Status update failed:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ACCEPT offer for a task -> move task to Assigned and create transaction
 router.post('/:taskId/offers/:offerId/accept', auth, async (req, res, next) => {
   try {
@@ -206,7 +290,7 @@ router.post('/:taskId/offers/:offerId/accept', auth, async (req, res, next) => {
       return res.status(403).json({ message: 'You can only accept offers on your own tasks.' });
     }
 
-    if (task.status !== 'Open') {
+    if (task.status !== 'Pending') {
       return res.status(400).json({ message: 'Task is not open.' });
     }
 
@@ -222,7 +306,7 @@ router.post('/:taskId/offers/:offerId/accept', auth, async (req, res, next) => {
     offer.status = 'accepted';
     await offer.save();
 
-    task.status = 'Assigned';
+    task.status = 'In Progress';
     await task.save();
 
     const transaction = await Transaction.create({
@@ -239,6 +323,16 @@ router.post('/:taskId/offers/:offerId/accept', auth, async (req, res, next) => {
     next(err);
   }
 });
+
+// 🔹 Get single task
+router.get('/:id', getTaskById);
+
+// 🔹 Accept task
+router.patch('/:id/accept', auth, acceptTask);
+
+// 🔹 Update task status
+router.put('/status/:id', auth, updateStatus);
+
 
 module.exports = router;
 
