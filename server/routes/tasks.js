@@ -5,10 +5,9 @@ const Transaction = require('../models/Transaction');
 const Notification = require('../models/Notification');
 const auth = require('../middleware/auth');
 const requireMinTrustScore = require('../middleware/trustCheck');
-const { deleteTask } = require('../controllers/taskController');
+const { deleteTask, updateTask } = require('../controllers/taskController');
 
 const router = express.Router();
-<Route path="/edit-task/:id" element={<EditTask />} />
 router.put('/:id', auth, updateTask);
 
 // CREATE task (subject to TrustScore rule)
