@@ -42,9 +42,9 @@ function App() {
     <Router>
       <div className={`min-h-screen flex flex-col ${isLight ? 'bg-slate-100 text-slate-900' : 'bg-slate-950 bg-gradient-to-br from-slate-950 via-slate-900 to-sky-900/60'}`}>
         <header className={`sticky top-0 z-20 border-b backdrop-blur ${isLight ? 'border-slate-200 bg-white/75' : 'border-slate-800/70 bg-slate-950/70'}`}>
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-2 py-3 md:px-4">
+          <div className="mx-auto flex max-w-8xl items-center justify-between px-2 py-3 md:px-4">
             <div className="flex items-center gap-2">
-              <div className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-sky-500/20 ring-1 ring-sky-500/60">
+              <div className="inline-flex h-10 w-12 items-center justify-center rounded-2xl bg-sky-500/20 ring-1 ring-sky-500/60">
                 <span className={`text-sm font-semibold ${isLight ? 'text-sky-700' : 'text-sky-300'}`}>UG</span>
               </div>
               <div className="flex flex-col">
