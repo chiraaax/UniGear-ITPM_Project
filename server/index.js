@@ -20,7 +20,9 @@ const userRoutes = require('./routes/users');
 const authRoutes = require('./routes/auth');
 const feedbackRoutes = require('./routes/feedback');
 const adminRoutes = require('./routes/admin');
+const uploadRoutes = require('./routes/upload');
 
+//API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/rentals', rentalRoutes);
 app.use('/api/tasks', taskRoutes);
