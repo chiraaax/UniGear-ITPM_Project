@@ -1,4 +1,5 @@
 import React from "react";
+import logo from "./assets/logo.png";
 import {
   BrowserRouter as Router,
   Routes,
@@ -62,7 +63,13 @@ function App() {
                 <span
                   className={`text-sm font-semibold ${isLight ? "text-sky-700" : "text-sky-300"}`}
                 >
-                  UG
+                  <div className="h-12 w-12 rounded-full overflow-hidden shadow-sm flex items-center justify-center">
+                    <img
+                      src={logo}
+                      alt="UNIGEAR"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 </span>
               </div>
               <div className="flex flex-col">

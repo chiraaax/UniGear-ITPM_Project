@@ -1,72 +1,129 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { Package, ListChecks, ArrowRight, ShieldCheck, Users } from "lucide-react";
 
 const Dashboard = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-8 px-2 py-10 md:px-4 md:py-12">
-      <section className="space-y-3">
-        <p className="inline-flex rounded-full border border-slate-700/70 bg-slate-900/60 px-3 py-1 text-xs font-medium uppercase tracking-[0.22em] text-slate-300">
-          Campus-first sharing
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-50 sm:text-4xl">
-          One hub for rentals and campus gigs.
-        </h1>
-        <p className="max-w-2xl text-sm text-slate-300 sm:text-base">
-          UniGear lets students safely rent equipment, share resources, and pick up micro-tasks — all
-          backed by trust scores and clear handover flows.
-        </p>
-      </section>
+    <div className="min-h-screen bg-gradient-to-br from-[#0b1a2a] to-[#0f2a44] text-white">
 
-      <section className="grid gap-5 md:grid-cols-2">
-        <button
-          type="button"
-          onClick={() => navigate('/rentals')}
-          className="group flex h-full flex-col justify-between rounded-2xl border border-slate-700/80 bg-gradient-to-br from-slate-900 via-slate-900/90 to-sky-900/50 p-5 text-left shadow-xl shadow-sky-900/40 transition hover:-translate-y-1 hover:border-sky-400/80 hover:shadow-2xl"
-        >
-          <div className="space-y-2">
-            <p className="inline-flex items-center gap-2 rounded-full bg-sky-900/50 px-3 py-1 text-xs font-medium text-sky-200 ring-1 ring-sky-500/40">
-              <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
-              Rentals engine
-            </p>
-            <h2 className="text-lg font-semibold text-slate-50">UniGear Rental System</h2>
-            <p className="text-sm text-slate-300">
-              Monetize idle electronics, lab gear, and sports equipment, or quickly find what you need for
-              your next class, meetup, or project.
-            </p>
-          </div>
-          <p className="mt-4 inline-flex items-center text-sm font-medium text-sky-300">
-            Explore rentals
-            <span className="ml-2 transition group-hover:translate-x-0.5">→</span>
-          </p>
-        </button>
+      {/* HERO SECTION */}
+      <div className="max-w-7xl mx-auto px-4 py-12 grid md:grid-cols-2 gap-10 items-center">
 
-        <button
-          type="button"
-          onClick={() => navigate('/tasks')}
-          className="group flex h-full flex-col justify-between rounded-2xl border border-slate-700/80 bg-gradient-to-br from-slate-900 via-slate-900/90 to-emerald-900/50 p-5 text-left shadow-xl shadow-emerald-900/40 transition hover:-translate-y-1 hover:border-emerald-400/80 hover:shadow-2xl"
-        >
-          <div className="space-y-2">
-            <p className="inline-flex items-center gap-2 rounded-full bg-emerald-900/40 px-3 py-1 text-xs font-medium text-emerald-200 ring-1 ring-emerald-500/40">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              Micro-task engine
-            </p>
-            <h2 className="text-lg font-semibold text-slate-50">UniGear Micro-task System</h2>
-            <p className="text-sm text-slate-300">
-              Post errands and academic help you need, or pick up quick, well-scoped gigs to earn money
-              between lectures.
-            </p>
-          </div>
-          <p className="mt-4 inline-flex items-center text-sm font-medium text-emerald-200">
-            View job board
-            <span className="ml-2 transition group-hover:translate-x-0.5">→</span>
+        {/* LEFT */}
+        <div className="space-y-5">
+          <p className="inline-flex items-center gap-2 rounded-full bg-slate-800/60 px-3 py-1 text-xs tracking-widest text-slate-300">
+            CAMPUS PLATFORM
           </p>
-        </button>
-      </section>
+
+          <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+            Rent, Share & Earn  
+            <span className="text-blue-400"> — All in One Place</span>
+          </h1>
+
+          <p className="text-gray-300 max-w-lg">
+            UniGear connects students to rent equipment and complete micro-tasks on campus.
+            Save time, earn money, and help your campus community with a simple and secure system.
+          </p>
+
+          {/* SMALL FEATURES */}
+          <div className="flex flex-wrap gap-4 pt-2">
+            <div className="flex items-center gap-2 text-sm text-gray-300">
+              <ShieldCheck size={16} className="text-green-400" />
+              Secure transactions
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-300">
+              <Users size={16} className="text-blue-400" />
+              Student community
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT IMAGE */}
+        <div className="relative">
+          <img
+            src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f"
+            alt="campus students"
+            className="rounded-2xl shadow-2xl object-cover w-full h-[320px] md:h-[400px]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0b1a2a]/70 to-transparent rounded-2xl"></div>
+        </div>
+      </div>
+
+      {/* MAIN FEATURES (EQUAL PRIORITY) */}
+      <div className="max-w-7xl mx-auto px-4 pb-14 grid gap-8 md:grid-cols-2">
+
+        {/* RENTALS CARD */}
+        <div
+          onClick={() => navigate("/rentals")}
+          className="group cursor-pointer flex flex-col justify-between 
+                     rounded-2xl p-6 
+                     bg-gradient-to-br from-sky-900/40 to-slate-900 
+                     border border-sky-700/40
+                     shadow-lg hover:shadow-sky-900/50
+                     transition transform hover:-translate-y-1"
+        >
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <Package size={26} className="text-sky-400" />
+              <h2 className="text-xl font-semibold">Rental System</h2>
+            </div>
+
+            <p className="text-gray-300 text-sm leading-relaxed">
+              Rent laptops, cameras, lab tools, and more from fellow students. 
+              Or list your own items and earn extra income easily.
+            </p>
+
+            <ul className="mt-4 space-y-2 text-sm text-gray-400">
+              <li>✔ Easy item listing</li>
+              <li>✔ Safe handover process</li>
+              <li>✔ Flexible pricing</li>
+            </ul>
+          </div>
+
+          <div className="mt-6 flex items-center bg-sky-900/40 text-sky-400 text-sm font-medium w-60 h-10 text-center justify-center rounded-full group-hover:bg-sky-900/60 transition transform hover:translate-x-1">
+            Explore Rentals
+            <ArrowRight className="ml-2 transition group-hover:translate-x-1" size={16} />
+          </div>
+        </div>
+
+        {/* TASKS CARD */}
+        <div
+          onClick={() => navigate("/tasks")}
+          className="group cursor-pointer flex flex-col justify-between 
+                     rounded-2xl p-6 
+                     bg-gradient-to-br from-emerald-900/40 to-slate-900 
+                     border border-emerald-700/40
+                     shadow-lg hover:shadow-emerald-900/50
+                     transition transform hover:-translate-y-1"
+        >
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <ListChecks size={26} className="text-emerald-400" />
+              <h2 className="text-xl font-semibold">Micro-task System</h2>
+            </div>
+
+            <p className="text-gray-300 text-sm leading-relaxed">
+              Post tasks like assignments, deliveries, or errands — or complete tasks and earn money between lectures.
+            </p>
+
+            <ul className="mt-4 space-y-2 text-sm text-gray-400">
+              <li>✔ Quick job posting</li>
+              <li>✔ Earn instantly</li>
+              <li>✔ Campus-based tasks</li>
+            </ul>
+          </div>
+
+         <div className="mt-6 flex items-center bg-emerald-900/40 text-emerald-400 text-sm font-medium w-60 h-10 text-center justify-center rounded-full group-hover:bg-emerald-900/60 transition transform hover:translate-x-1">
+            View Tasks
+            <ArrowRight className="ml-2 transition group-hover:translate-x-1" size={16} />
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 };
 
 export default Dashboard;
-
