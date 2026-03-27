@@ -268,75 +268,92 @@ const AdminDashboard = () => {
     }
   }, [authHeaders]);
 
-  const loadAuditLogs = useCallback(async (overrideFilters = null) => {
-    const f = overrideFilters || logFilters;
-    const qs = new URLSearchParams();
+const loadAuditLogs = useCallback(async (overrideFilters = null) => {
+  const f = overrideFilters || logFilters;
+  console.log('loadAuditLogs called with filters:', f);
+  const qs = new URLSearchParams();
+  
+  // Apply date range presets
+  let fromDate = f.from;
+  let toDate = f.to;
+  
+  // Only apply preset if we're using preset and no custom dates
+  if (dateRangePreset !== 'custom' && (!f.from || !f.to)) {
+    const now = new Date();
+    toDate = now.toISOString().split('T')[0];
     
-    // Apply date range presets
-    let fromDate = f.from;
-    let toDate = f.to;
-    
-    if (dateRangePreset !== 'custom' && !f.from && !f.to) {
-      const now = new Date();
-      toDate = now.toISOString().split('T')[0];
-      
-      switch(dateRangePreset) {
-        case '24h':
-          const yesterday = new Date(now);
-          yesterday.setDate(yesterday.getDate() - 1);
-          fromDate = yesterday.toISOString().split('T')[0];
-          break;
-        case '7d':
-          const sevenDaysAgo = new Date(now);
-          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-          fromDate = sevenDaysAgo.toISOString().split('T')[0];
-          break;
-        case '30d':
-          const thirtyDaysAgo = new Date(now);
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-          fromDate = thirtyDaysAgo.toISOString().split('T')[0];
-          break;
-        case '90d':
-          const ninetyDaysAgo = new Date(now);
-          ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-          fromDate = ninetyDaysAgo.toISOString().split('T')[0];
-          break;
-      }
+    switch(dateRangePreset) {
+      case '24h':
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        fromDate = yesterday.toISOString().split('T')[0];
+        break;
+      case '7d':
+        const sevenDaysAgo = new Date(now);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        fromDate = sevenDaysAgo.toISOString().split('T')[0];
+        break;
+      case '30d':
+        const thirtyDaysAgo = new Date(now);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        fromDate = thirtyDaysAgo.toISOString().split('T')[0];
+        break;
+      case '90d':
+        const ninetyDaysAgo = new Date(now);
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+        fromDate = ninetyDaysAgo.toISOString().split('T')[0];
+        break;
     }
-    
-    if (f.action) qs.append('action', f.action);
-    if (f.targetType) qs.append('targetType', f.targetType);
-    if (f.userRole) qs.append('userRole', f.userRole);
-    if (f.userId) qs.append('userId', f.userId);
-    if (f.q) qs.append('q', f.q);
-    if (fromDate) qs.append('from', fromDate);
-    if (toDate) qs.append('to', toDate);
-    qs.append('limit', String(f.limit || DEFAULT_AUDIT_PAGE_SIZE));
-    qs.append('page', String(f.page || 1));
-    qs.append('includeStudentActions', String(f.includeStudentActions !== false));
-    qs.append('sortBy', f.sortBy || 'createdAt');
-    qs.append('sortOrder', f.sortOrder || 'desc');
+  }
+  
+  // Only add date parameters if they have values
+  if (fromDate && fromDate.trim()) {
+    qs.append('from', fromDate);
+  }
+  if (toDate && toDate.trim()) {
+    qs.append('to', toDate);
+  }
+  
+  // Add other filters only if they have values
+  if (f.action && f.action.trim()) qs.append('action', f.action);
+  if (f.targetType && f.targetType.trim()) qs.append('targetType', f.targetType);
+  if (f.userRole && f.userRole.trim()) qs.append('userRole', f.userRole);
+  if (f.userId && f.userId.trim()) qs.append('userId', f.userId);
+  if (f.q && f.q.trim()) qs.append('q', f.q);
+  
+  qs.append('limit', String(f.limit || DEFAULT_AUDIT_PAGE_SIZE));
+  qs.append('page', String(f.page || 1));
+  qs.append('includeStudentActions', String(f.includeStudentActions !== false));
+  qs.append('sortBy', f.sortBy || 'createdAt');
+  qs.append('sortOrder', f.sortOrder || 'desc');
 
-    try {
-      const res = await fetch(`${API_BASE}/admin/audit-logs?${qs.toString()}`, { headers: authHeaders });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.message || 'Failed to load audit logs.');
-        return;
-      }
-      setAuditLogs(Array.isArray(data?.items) ? data.items : []);
-      setAuditTotal(Number(data?.total) || 0);
-      
-      // Update stats based on loaded logs
-      const calculatedStats = calculateAuditStats(data?.items || []);
-      setAuditStats(calculatedStats);
-      
-      setError('');
-    } catch (err) {
-      console.error('Error loading audit logs:', err);
-      setError('Failed to load audit logs.');
+  console.log('Loading audit logs with params:', qs.toString());
+
+  try {
+    const res = await fetch(`${API_BASE}/admin/audit-logs?${qs.toString()}`, { 
+      headers: authHeaders 
+    });
+    const data = await res.json();
+    
+    if (!res.ok) {
+      console.error('Audit logs error:', data);
+      setError(data.message || 'Failed to load audit logs.');
+      return;
     }
-  }, [authHeaders, logFilters, dateRangePreset]);
+    
+    setAuditLogs(Array.isArray(data?.items) ? data.items : []);
+    setAuditTotal(Number(data?.total) || 0);
+    
+    // Update stats based on loaded logs
+    const calculatedStats = calculateAuditStats(data?.items || []);
+    setAuditStats(calculatedStats);
+    
+    setError('');
+  } catch (err) {
+    console.error('Error loading audit logs:', err);
+    setError('Failed to load audit logs.');
+  }
+}, [authHeaders, logFilters, dateRangePreset]);
 
   const exportAuditLogsCsv = async () => {
     const f = logFilters;
@@ -694,37 +711,25 @@ const AdminDashboard = () => {
     pushToast('success', 'View applied', `Loaded "${view.name}"`);
   };
 
-  const resetFilters = () => {
-    setLogFilters({
-      action: '',
-      targetType: '',
-      userRole: '',
-      userId: '',
-      q: '',
-      from: '',
-      to: '',
-      limit: DEFAULT_AUDIT_PAGE_SIZE,
-      page: 1,
-      includeStudentActions: true,
-      sortBy: 'createdAt',
-      sortOrder: 'desc',
-    });
-    setDateRangePreset('7d');
-    loadAuditLogs({
-      action: '',
-      targetType: '',
-      userRole: '',
-      userId: '',
-      q: '',
-      from: '',
-      to: '',
-      limit: DEFAULT_AUDIT_PAGE_SIZE,
-      page: 1,
-      includeStudentActions: true,
-      sortBy: 'createdAt',
-      sortOrder: 'desc',
-    });
+const resetFilters = () => {
+  const resetFiltersObj = {
+    action: '',
+    targetType: '',
+    userRole: '',
+    userId: '',
+    q: '',
+    from: '',
+    to: '',
+    limit: DEFAULT_AUDIT_PAGE_SIZE,
+    page: 1,
+    includeStudentActions: true,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
   };
+  setLogFilters(resetFiltersObj);
+  setDateRangePreset('7d');
+  loadAuditLogs(resetFiltersObj);
+};
 
   const auditPageSize = logFilters.limit || DEFAULT_AUDIT_PAGE_SIZE;
   const totalAuditPages = Math.max(Math.ceil(auditTotal / auditPageSize), 1);
@@ -1288,7 +1293,12 @@ const AdminDashboard = () => {
                       type="text"
                       placeholder="Search by user, action, target..."
                       value={logFilters.q}
-                      onChange={(e) => setLogFilters((prev) => ({ ...prev, q: e.target.value }))}
+                      onChange={(e) => {
+                        const updatedFilters = { ...logFilters, q: e.target.value, page: 1 };
+                        setLogFilters(updatedFilters);
+                        // Optional: debounce this for better performance
+                        loadAuditLogs(updatedFilters);
+                      }}
                       className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
                     />
                   </div>
@@ -1298,7 +1308,10 @@ const AdminDashboard = () => {
                     <label className="block text-xs text-gray-400 mb-1">Action Type</label>
                     <select
                       value={logFilters.action}
-                      onChange={(e) => setLogFilters((prev) => ({ ...prev, action: e.target.value }))}
+                      onChange={(e) => {
+                        const newAction = e.target.value;
+                        setLogFilters(prev => ({ ...prev, action: newAction, page: 1 }));
+                      }}
                       className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
                     >
                       <option value="">All actions</option>
@@ -1320,7 +1333,10 @@ const AdminDashboard = () => {
                     <label className="block text-xs text-gray-400 mb-1">Target Type</label>
                     <select
                       value={logFilters.targetType}
-                      onChange={(e) => setLogFilters((prev) => ({ ...prev, targetType: e.target.value }))}
+                      onChange={(e) => {
+                        const newTargetType = e.target.value;
+                        setLogFilters(prev => ({ ...prev, targetType: newTargetType, page: 1 }));
+                      }}
                       className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
                     >
                       <option value="">All types</option>
@@ -1337,7 +1353,10 @@ const AdminDashboard = () => {
                     <label className="block text-xs text-gray-400 mb-1">User Role</label>
                     <select
                       value={logFilters.userRole}
-                      onChange={(e) => setLogFilters((prev) => ({ ...prev, userRole: e.target.value }))}
+                      onChange={(e) => {
+                        const newUserRole = e.target.value;
+                        setLogFilters(prev => ({ ...prev, userRole: newUserRole, page: 1 }));
+                      }}
                       className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
                     >
                       <option value="">All roles</option>
@@ -1352,9 +1371,14 @@ const AdminDashboard = () => {
                     <select
                       value={dateRangePreset}
                       onChange={(e) => {
-                        setDateRangePreset(e.target.value);
-                        if (e.target.value !== 'custom') {
-                          setLogFilters(prev => ({ ...prev, from: '', to: '' }));
+                        const newPreset = e.target.value;
+                        setDateRangePreset(newPreset);
+                        if (newPreset !== 'custom') {
+                          // Clear custom date ranges when preset changes
+                          const updatedFilters = { ...logFilters, from: '', to: '', page: 1 };
+                          setLogFilters(updatedFilters);
+                          // Automatically apply the preset filter
+                          loadAuditLogs(updatedFilters);
                         }
                       }}
                       className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
@@ -1375,7 +1399,10 @@ const AdminDashboard = () => {
                         <input
                           type="date"
                           value={logFilters.from}
-                          onChange={(e) => setLogFilters((prev) => ({ ...prev, from: e.target.value }))}
+                          onChange={(e) => {
+                            const newFrom = e.target.value;
+                            setLogFilters(prev => ({ ...prev, from: newFrom, page: 1 }));
+                          }}
                           className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
                         />
                       </div>
@@ -1384,7 +1411,10 @@ const AdminDashboard = () => {
                         <input
                           type="date"
                           value={logFilters.to}
-                          onChange={(e) => setLogFilters((prev) => ({ ...prev, to: e.target.value }))}
+                          onChange={(e) => {
+                            const newTo = e.target.value;
+                            setLogFilters(prev => ({ ...prev, to: newTo, page: 1 }));
+                          }}
                           className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
                         />
                       </div>
@@ -1392,29 +1422,33 @@ const AdminDashboard = () => {
                   )}
 
                   {/* Include Student Actions */}
-                  <div className="flex items-center">
-                    <label className="flex items-center gap-2 text-white cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={logFilters.includeStudentActions}
-                        onChange={(e) => setLogFilters((prev) => ({ ...prev, includeStudentActions: e.target.checked }))}
-                        className="rounded border-gray-600 bg-gray-700 text-blue-600"
-                      />
-                      <span className="text-sm">Include student actions</span>
-                    </label>
-                  </div>
+                <div className="flex items-center">
+                  <label className="flex items-center gap-2 text-white cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={logFilters.includeStudentActions}
+                      onChange={(e) => {
+                        const newValue = e.target.checked;
+                        setLogFilters(prev => ({ ...prev, includeStudentActions: newValue, page: 1 }));
+                      }}
+                      className="rounded border-gray-600 bg-gray-700 text-blue-600"
+                    />
+                    <span className="text-sm">Include student actions</span>
+                  </label>
+                </div>
                 </div>
 
                 {/* Apply Filters Button */}
-                <div className="mt-4">
-                  <ActionButton onClick={() => {
-                    const nextFilters = { ...logFilters, page: 1 };
-                    setLogFilters(nextFilters);
-                    loadAuditLogs(nextFilters);
-                  }} variant="primary" icon={Search}>
-                    Apply Filters
-                  </ActionButton>
-                </div>
+              <div className="mt-4">
+                <ActionButton onClick={() => {
+                  // Create a fresh copy of current filters with page reset to 1
+                  const currentFilters = { ...logFilters, page: 1 };
+                  console.log('Applying filters:', currentFilters); // Debug log
+                  loadAuditLogs(currentFilters);
+                }} variant="primary" icon={Search}>
+                  Apply Filters
+                </ActionButton>
+              </div>
               </div>
 
               {/* Audit Logs List */}

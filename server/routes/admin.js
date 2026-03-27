@@ -76,9 +76,10 @@ const pickUserAudit = (userDoc) => {
     : null;
 };
 
-const writeAuditLog = async ({ adminId, action, targetType, targetId, details = {} }) => {
+const writeAuditLog = async ({ adminId, adminRole, action, targetType, targetId, details = {} }) => {
   await AdminAuditLog.create({
     admin: adminId,
+    adminRole: adminRole,
     action,
     targetType,
     targetId,
@@ -377,48 +378,110 @@ router.get('/audit-logs', async (req, res, next) => {
       action,
       targetType,
       adminId,
+      userId,  // Add userId filter
+      userRole,  // Add userRole filter
       targetId,
       q,
       from,
       to,
       limit = '25',
       page = '1',
+      includeStudentActions = 'true',  // Add includeStudentActions
+      sortBy = 'createdAt',  // Add sortBy
+      sortOrder = 'desc',  // Add sortOrder
     } = req.query;
 
     const query = {};
+    
+    // Apply filters
     if (action) query.action = String(action);
     if (targetType) query.targetType = String(targetType);
     if (adminId) query.admin = String(adminId);
     if (targetId) query.targetId = String(targetId);
+    
+    // Handle userId filter (search by admin user ID)
+    if (userId) query.admin = String(userId);
+    
+    // Handle date range
     if (from || to) {
       query.createdAt = {};
       if (from) query.createdAt.$gte = new Date(from);
       if (to) query.createdAt.$lte = new Date(to);
     }
 
-    if (q) {
-      // Lightweight search across action/targetType (not full-text).
+    // Handle includeStudentActions - filter out admin actions if needed
+    const includeStudents = includeStudentActions === 'true';
+    if (!includeStudents) {
+      // We need to filter by user role, but the admin field only stores user ID
+      // We'll need to populate and filter after the query, or do an aggregation
+      // For simplicity, we'll fetch and filter later
+    }
+
+    // Handle search query
+    if (q && q.trim()) {
       query.$or = [
         { action: { $regex: String(q), $options: 'i' } },
         { targetType: { $regex: String(q), $options: 'i' } },
+        { targetId: { $regex: String(q), $options: 'i' } },
       ];
     }
 
+    // Parse pagination
     const parsedLimitRaw = Number(limit);
     const parsedPageRaw = Number(page);
     const parsedLimit = Math.min(Math.max(parsedLimitRaw || 25, 1), 100);
     const parsedPage = Math.max(parsedPageRaw || 1, 1);
     const skip = (parsedPage - 1) * parsedLimit;
 
-    const total = await AdminAuditLog.countDocuments(query);
+    // Build sort object
+    const sort = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-    const logs = await AdminAuditLog.find(query)
-      .sort({ createdAt: -1 })
+    // First, get logs with pagination
+    let logs = await AdminAuditLog.find(query)
+      .sort(sort)
       .skip(skip)
       .limit(parsedLimit)
-      .populate('admin', 'name email');
-    res.json({ items: logs, total });
+      .populate('admin', 'name email role');
+
+    // Filter by userRole if specified and includeStudentActions is false
+    let filteredLogs = logs;
+    if (userRole && userRole !== '') {
+      filteredLogs = logs.filter(log => log.admin?.role === userRole);
+    } else if (!includeStudents && userRole !== 'admin') {
+      // If we're not including student actions, only show admin actions
+      filteredLogs = logs.filter(log => log.admin?.role === 'admin');
+    }
+
+    // Get total count with the same filters
+    let totalQuery = { ...query };
+    
+    // For total count, we need to count filtered logs if we applied role filters
+    let total;
+    if (userRole || !includeStudents) {
+      // Get all logs matching the query (without pagination) to count filtered results
+      const allLogs = await AdminAuditLog.find(query).populate('admin', 'role');
+      let filteredAllLogs = allLogs;
+      
+      if (userRole && userRole !== '') {
+        filteredAllLogs = allLogs.filter(log => log.admin?.role === userRole);
+      } else if (!includeStudents) {
+        filteredAllLogs = allLogs.filter(log => log.admin?.role === 'admin');
+      }
+      
+      total = filteredAllLogs.length;
+      
+      // Adjust pagination for filtered logs
+      const start = skip;
+      const end = start + parsedLimit;
+      filteredLogs = filteredAllLogs.slice(start, end);
+    } else {
+      total = await AdminAuditLog.countDocuments(query);
+    }
+
+    res.json({ items: filteredLogs, total });
   } catch (err) {
+    console.error('Audit logs error:', err);
     next(err);
   }
 });
