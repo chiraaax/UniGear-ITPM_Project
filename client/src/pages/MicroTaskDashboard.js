@@ -9,44 +9,41 @@ const TaskDashboard = () => {
   const [category, setCategory] = useState("All");
   const [status, setStatus] = useState("All");
 
-  // Fetch tasks from backend
+  const navigate = useNavigate();
+
+  // ================= FETCH TASKS =================
   const fetchTasks = async () => {
     try {
-      let query = [];
+      let query = new URLSearchParams();
 
-      if (search) query.push(`search=${search}`);
-      if (category !== "All") query.push(`category=${category}`);
-      if (status !== "All") query.push(`status=${status}`);
+      if (search.trim()) query.append("search", search.trim());
+      if (category !== "All") query.append("category", category);
+      if (status !== "All") query.append("status", status);
 
-      const queryString = query.length ? `?${query.join("&")}` : "";
-
-      const res = await fetch(`${API_BASE}/tasks${queryString}`);
+      const url = `${API_BASE}/tasks${query.toString() ? `?${query.toString()}` : ""}`;
+      const res = await fetch(url);
       const data = await res.json();
 
-      setTasks(data);
+      setTasks(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching tasks:", error);
     }
   };
-// Navigation to post task page
-  const navigate = useNavigate();
-  const handlePostTask = () => {
-  navigate("/tasks"); // change path if needed
-};
 
-
-  // Load tasks on page load + filter change
   useEffect(() => {
     fetchTasks();
   }, [search, category, status]);
 
-  // Status color styles
+  const handlePostTask = () => {
+    navigate("/tasks");
+  };
+
   const getStatusStyle = (status) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case "pending":
-        return "bg-yellow-500";
+        return "bg-yellow-600";
       case "inprogress":
-        return "bg-blue-500";
+        return "bg-blue-700";
       case "completed":
         return "bg-green-500";
       default:
@@ -55,35 +52,49 @@ const TaskDashboard = () => {
   };
 
   return (
-    <div className="p-5 font-sans">
-      <h1 className="text-2xl font-bold mb-4">Task Dashboard</h1>
+    <div className="min-h-screen bg-gradient-to-br from-[#0b1a2a] to-[#0f2a44] text-white p-6  ">
 
-      {/* Controls */}
-      <div className="flex flex-wrap gap-3 mb-5">
-        {/* Search */}
+      {/* HERO SECTION */}
+      <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-10 md:py-12">
+        <p className="text-sm tracking-widest text-blue-300 mb-2">
+          MICRO-TASK ENGINE
+        </p>
+
+        <h1 className="text-4xl font-bold mb-3">
+          Find & Post Campus Tasks Easily
+        </h1>
+
+        <p className="text-gray-300 max-w-xl">
+          Browse available micro-tasks or post your own tasks to get help from other students.
+        </p>
+      </div>
+
+      {/* CONTROLS */}
+      <div className="flex flex-wrap gap-3 mb-8 justify-center">
+
         <input
           type="text"
           placeholder="Search tasks..."
-          className="px-3 py-2 border rounded-md w-48"
+          className="px-4 py-2 rounded-lg bg-[#1e2f45] border border-gray-600 focus:outline-none"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
 
-        {/* Category */}
         <select
-          className="px-3 py-2 border rounded-md bg-gray-500 text-white"
+          className="px-4 py-2 rounded-lg bg-[#1e2f45] border border-gray-600"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         >
           <option value="All">All Categories</option>
-          <option value="Errands">Errands</option>
+          <option value="Delivery">Delivery</option>
+          <option value="Cleaning">Cleaning</option>
+          <option value="Academic">Academic</option>
           <option value="Technical">Technical</option>
-          <option value="Design">Design</option>
+          <option value="Other">Other</option>
         </select>
 
-        {/* Status */}
         <select
-          className="px-3 py-2 border rounded-md bg-gray-500 text-white"
+          className="px-4 py-2 rounded-lg bg-[#1e2f45] border border-gray-600"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
         >
@@ -93,41 +104,52 @@ const TaskDashboard = () => {
           <option value="completed">Completed</option>
         </select>
 
-        {/* Button */}
         <button
-  onClick={handlePostTask}
-  className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
->
-  + Post Task
-</button>
+          onClick={handlePostTask}
+          className="bg-green-500 hover:bg-green-600 px-5 py-2 rounded-lg font-semibold shadow-md"
+        >
+          + Post Task
+        </button>
       </div>
 
-      {/* Task Cards */}
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
+      {/* TASK GRID */}
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-6 flex w-full max-w-6xl justify-center mx-auto ">
+        
+
         {tasks.length > 0 ? (
           tasks.map((task) => (
             <div
               key={task._id}
-              className="p-4 rounded-xl bg-gray-500 shadow hover:shadow-lg transition"
+              className="bg-[#13263a] border border-gray-700 rounded-2xl p-5 shadow-lg hover:scale-[1.02] transition"
             >
-              <h3 className="font-semibold text-lg">{task.description}</h3>
+              <h3 className="text-lg font-semibold mb-2 bg-gray-700/50 px-2 py-1 rounded-full inline-block">
+                {task.description}
+              </h3>
 
-              <p className="text-sm text-black">💰 LKR {task.budget}</p>
-              <p className="text-sm text-black">📍 {task.location}</p>
-              <p className="text-sm text-black">📂 {task.category}</p>
+              <p className="text-sm text-gray-300">💰 LKR {task.budget}</p>
+              <p className="text-sm text-gray-300">📍 {task.location}</p>
+              <p className="text-sm text-gray-300">📂 {task.category}</p>
 
               <span
-                className={`inline-block mt-2 px-2 py-1 text-white text-xs rounded ${getStatusStyle(
+                className={`inline-block mt-3 px-3 py-1 text-xs rounded-full text-white ${getStatusStyle(
                   task.status
                 )}`}
               >
                 {task.status}
               </span>
+
+              <button
+                onClick={() => navigate(`/task/${task._id}`)}
+                className="mt-4 w-full bg-blue-500 hover:bg-darkblue-400 py-2 rounded-lg text-sm font-semibold text-white tranparent border boder-blue-500 hover:border-blue-600 transition"
+              >
+                View Task
+              </button>
             </div>
           ))
         ) : (
-          <p className="text-gray-500">No tasks found.</p>
+          <p className="text-gray-400">No tasks found.</p>
         )}
+
       </div>
     </div>
   );

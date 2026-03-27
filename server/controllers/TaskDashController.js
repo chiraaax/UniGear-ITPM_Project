@@ -1,75 +1,85 @@
-import Task from "../models/TaskDashModel.js";
+const Task = require('../models/Task');
 
-// GET all tasks
-export const getTasks = async (req, res) => {
+// ================= GET ALL TASKS WITH FILTER =================
+exports.getTasks = async (req, res) => {
   try {
-    const { status, category, search } = req.query;
+    let filter = {};
 
-    let query = {};
-
-    if (status && status !== "All") {
-      query.status = status;
+    // SEARCH (description)
+    if (req.query.search) {
+      filter.description = {
+        $regex: req.query.search,
+        $options: 'i', // case-insensitive
+      };
     }
 
-    if (category && category !== "All") {
-      query.category = category;
+    // CATEGORY FILTER
+    if (req.query.category) {
+      filter.category = req.query.category;
     }
 
-    if (search) {
-      query.description = { $regex: search, $options: "i" };
+    // STATUS FILTER
+    if (req.query.status) {
+      filter.status = req.query.status;
     }
 
-    const tasks = await Task.find(query).sort({ createdAt: -1 });
+    const tasks = await Task.find(filter).sort({ createdAt: -1 });
 
     res.json(tasks);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ msg: err.message });
   }
 };
 
-// POST create task
-export const createTask = async (req, res) => {
+// ================= CREATE =================
+exports.createTask = async (req, res) => {
   try {
-    const { description, budget, deadline, location, category } = req.body;
-
-    const task = new Task({
-      description,
-      budget,
-      deadline,
-      location,
-      category,
-    });
-
-    const savedTask = await task.save();
-    res.status(201).json(savedTask);
+    const task = new Task(req.body);
+    await task.save();
+    res.status(201).json(task);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(500).json({ msg: err.message });
   }
 };
 
-// UPDATE status
-export const updateTaskStatus = async (req, res) => {
+// ================= UPDATE =================
+// UPDATE TASK
+exports.updateTask = async (req, res) => {
   try {
-    const { status } = req.body;
+    const { description, category, budget, deadline, location } = req.body;
 
-    const task = await Task.findByIdAndUpdate(
+    const updatedTask = await Task.findByIdAndUpdate(
       req.params.id,
-      { status },
-      { new: true }
+      {
+        description,
+        category,
+        budget,
+        deadline,
+        location,
+      },
+      {
+        new: true,
+        runValidators: true, // ✅ VERY IMPORTANT
+      }
     );
 
-    res.json(task);
+    if (!updatedTask) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    res.json(updatedTask);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    console.error(err);
+    res.status(500).json({ message: 'Failed to update task' });
   }
 };
 
-// DELETE task
-export const deleteTask = async (req, res) => {
+// ================= DELETE =================
+exports.deleteTask = async (req, res) => {
   try {
     await Task.findByIdAndDelete(req.params.id);
-    res.json({ message: "Task deleted" });
+    res.json({ msg: 'Task deleted' });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(500).json({ msg: err.message });
   }
 };
