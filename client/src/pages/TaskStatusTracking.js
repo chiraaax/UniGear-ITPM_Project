@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { BarChart3, ClipboardList } from 'lucide-react';
 
-const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
+const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000/api";
 
 const TaskStatusTracking = () => {
   const { token } = useAuth();
@@ -19,9 +20,8 @@ const TaskStatusTracking = () => {
       setLoading(true);
       const headers = { Authorization: `Bearer ${token}` };
 
-      // Fetch user's tasks
       const res = await fetch(`${API_BASE}/tasks/my-tasks`, { headers });
-      if (!res.ok) throw new Error('Failed to fetch tasks');
+      if (!res.ok) throw new Error("Failed to fetch tasks");
 
       const tasks = await res.json();
 
@@ -47,17 +47,15 @@ const TaskStatusTracking = () => {
 
       setTaskStats(stats);
     } catch (error) {
-      console.error('Error fetching task stats:', error);
+      console.error("Error fetching task stats:", error);
     } finally {
       setLoading(false);
     }
   }, [token]);
 
   useEffect(() => {
-    if (token) {
-      fetchTaskStats();
-    }
-  }, [token, fetchTaskStats]);
+    if (token) fetchTaskStats();
+  }, [token]);
 
   if (!token) {
     return (
@@ -68,19 +66,31 @@ const TaskStatusTracking = () => {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-2 py-8 md:px-4">
-      <h1 className="text-4xl font-bold text-slate-50 mb-8">Task Status Tracking</h1>
+    <div className="min-h-screen bg-gradient-to-br from-[#0b1a2a] to-[#0f2a44] text-white px-4 py-10">
+      <div className="max-w-7xl mx-auto">
 
-      {loading && <p className="text-slate-400">Loading...</p>}
+        {/* HEADER */}
+        <div className="flex items-center gap-3 mb-8">
+          <BarChart3 className="text-blue-400" size={28} />
+          <h1 className="text-4xl font-bold">Task Analytics Dashboard</h1>
+        </div>
 
-      {!loading && (
-        <div className="space-y-6">
-          {/* Overview Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-            <div className="bg-slate-800 p-5 rounded-xl border border-slate-700">
-              <p className="text-slate-400 text-base">Total Tasks</p>
-              <p className="text-3xl font-bold text-slate-50">{taskStats.total}</p>
-            </div>
+        {loading ? (
+          <p className="text-slate-400">Loading...</p>
+        ) : (
+          <div className="space-y-8">
+
+            {/* STATS CARDS */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+
+              {/* TOTAL */}
+              <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700 shadow-lg hover:scale-105 transition">
+                <div className="flex items-center gap-3 mb-2">
+                  <ClipboardList className="text-white" />
+                  <p className="text-slate-400">Total Tasks</p>
+                </div>
+                <p className="text-3xl font-bold">{taskStats.total}</p>
+              </div>
 
             <div className="bg-yellow-900/20 p-5 rounded-xl border border-yellow-700/30">
               <p className="text-yellow-300 text-base">Pending</p>
@@ -102,105 +112,63 @@ const TaskStatusTracking = () => {
           <div className="bg-slate-900 p-7 rounded-xl border border-slate-700">
             <h2 className="text-2xl font-semibold text-slate-50 mb-4">Tasks by Category</h2>
 
-            {Object.keys(taskStats.byCategory).length > 0 ? (
-              <div className="space-y-3">
-                {Object.entries(taskStats.byCategory).map(([category, count]) => (
-                  <div
-                    key={category}
-                    className="flex items-center justify-between p-4 bg-slate-800 rounded-xl"
-                  >
-                    <span className="text-slate-300">{category}</span>
-                    <span className="text-base font-semibold bg-slate-700 px-3 py-1 rounded-full text-slate-100">
-                      {count}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-slate-400">No tasks with categories yet.</p>
-            )}
-          </div>
-
-          {/* Status Chart */}
-          <div className="bg-slate-900 p-7 rounded-xl border border-slate-700">
-            <h2 className="text-2xl font-semibold text-slate-50 mb-4">Status Distribution</h2>
-
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-slate-300">Pending</span>
-                  <span className="text-yellow-400 font-semibold">
-                    {taskStats.total > 0
-                      ? Math.round((taskStats.pending / taskStats.total) * 100)
-                      : 0}
-                    %
-                  </span>
+              {Object.keys(taskStats.byCategory).length > 0 ? (
+                <div className="space-y-3">
+                  {Object.entries(taskStats.byCategory).map(([category, count]) => (
+                    <div
+                      key={category}
+                      className="flex items-center justify-between p-4 bg-slate-800 rounded-xl hover:bg-slate-700 transition"
+                    >
+                      <span>{category}</span>
+                      <span className="bg-slate-700 px-3 py-1 rounded-full text-sm font-semibold">
+                        {count}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-                <div className="w-full bg-slate-700 h-3 rounded-full overflow-hidden">
-                  <div
-                    className="bg-yellow-500 h-full rounded-full transition-all"
-                    style={{
-                      width: `${
-                        taskStats.total > 0
-                          ? (taskStats.pending / taskStats.total) * 100
-                          : 0
-                      }%`,
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-slate-300">In Progress</span>
-                  <span className="text-blue-400 font-semibold">
-                    {taskStats.total > 0
-                      ? Math.round((taskStats.inProgress / taskStats.total) * 100)
-                      : 0}
-                    %
-                  </span>
-                </div>
-                <div className="w-full bg-slate-700 h-3 rounded-full overflow-hidden">
-                  <div
-                    className="bg-blue-500 h-full rounded-full transition-all"
-                    style={{
-                      width: `${
-                        taskStats.total > 0
-                          ? (taskStats.inProgress / taskStats.total) * 100
-                          : 0
-                      }%`,
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-base mb-2">
-                  <span className="text-slate-300">Completed</span>
-                  <span className="text-green-400 font-semibold">
-                    {taskStats.total > 0
-                      ? Math.round((taskStats.completed / taskStats.total) * 100)
-                      : 0}
-                    %
-                  </span>
-                </div>
-                <div className="w-full bg-slate-700 h-3 rounded-full overflow-hidden">
-                  <div
-                    className="bg-green-500 h-full rounded-full transition-all"
-                    style={{
-                      width: `${
-                        taskStats.total > 0
-                          ? (taskStats.completed / taskStats.total) * 100
-                          : 0
-                      }%`,
-                    }}
-                  />
-                </div>
-              </div>
+              ) : (
+                <p className="text-slate-400">No tasks available.</p>
+              )}
             </div>
+
+            {/* STATUS PROGRESS */}
+            <div className="bg-slate-900 p-7 rounded-2xl border border-slate-700 shadow-lg">
+              <div className="flex items-center gap-2 mb-5">
+                <BarChart3 className="text-indigo-400" />
+                <h2 className="text-2xl font-semibold">Status Distribution</h2>
+              </div>
+
+              {[
+                { label: "Pending", value: taskStats.pending, color: "bg-yellow-500" },
+                { label: "In Progress", value: taskStats.inProgress, color: "bg-blue-500" },
+                { label: "Completed", value: taskStats.completed, color: "bg-green-500" },
+              ].map((item) => {
+                const percent =
+                  taskStats.total > 0
+                    ? Math.round((item.value / taskStats.total) * 100)
+                    : 0;
+
+                return (
+                  <div key={item.label} className="mb-4">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>{item.label}</span>
+                      <span className="font-semibold">{percent}%</span>
+                    </div>
+
+                    <div className="w-full bg-slate-700 h-3 rounded-full overflow-hidden">
+                      <div
+                        className={`${item.color} h-full rounded-full transition-all duration-500`}
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

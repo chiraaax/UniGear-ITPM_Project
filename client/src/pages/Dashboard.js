@@ -1,3 +1,4 @@
+import { Package, ListChecks, ArrowRight, ShieldCheck, Users } from "lucide-react";
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Chatbot from '../components/Chatbot';
@@ -9,99 +10,133 @@ const Dashboard = () => {
 
   return (
     <>
-      <div className="mx-auto flex max-w-7xl flex-col gap-8 px-2 py-10 md:px-4 md:py-12 min-h-screen justify-between">
-      
-      {/* MAIN CONTENT */}
-      <div className="space-y-8">
-        <section className="space-y-3">
-          <p className="inline-flex rounded-full border border-slate-700/70 bg-slate-900/60 px-3 py-1 text-xs font-medium uppercase tracking-[0.22em] text-slate-300">
-            Campus-first sharing
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-50 sm:text-4xl">
-            One hub for rentals and campus gigs.
-          </h1>
-          <p className="max-w-2xl text-sm text-slate-300 sm:text-base">
-            UniGear lets students safely rent equipment, share resources, and pick up micro-tasks — all
-            backed by trust scores and clear handover flows.
-          </p>
-        </section>
+      <div className="min-h-screen bg-gradient-to-br from-[#0b1a2a] to-[#0f2a44] text-white flex flex-col justify-between">
 
-        <section className="grid gap-5 md:grid-cols-2">
+        {/* HERO SECTION */}
+        <div className="max-w-7xl mx-auto px-4 py-12 grid md:grid-cols-2 gap-10 items-center">
+
+          {/* LEFT */}
+          <div className="space-y-5">
+            <p className="inline-flex items-center gap-2 rounded-full bg-slate-800/60 px-3 py-1 text-xs tracking-widest text-slate-300">
+              CAMPUS PLATFORM
+            </p>
+
+            <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+              Rent, Share & Earn  
+              <span className="text-blue-400"> — All in One Place</span>
+            </h1>
+
+            <p className="text-gray-300 max-w-lg">
+              UniGear connects students to rent equipment and complete micro-tasks on campus.
+              Save time, earn money, and help your campus community with a simple and secure system.
+            </p>
+
+            <div className="flex flex-wrap gap-4 pt-2">
+              <div className="flex items-center gap-2 text-sm text-gray-300">
+                <ShieldCheck size={16} className="text-green-400" />
+                Secure transactions
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-300">
+                <Users size={16} className="text-blue-400" />
+                Student community
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT IMAGE */}
+          <div className="relative">
+            <img
+              src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f"
+              alt="campus students"
+              className="rounded-2xl shadow-2xl object-cover w-full h-[320px] md:h-[400px]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0b1a2a]/70 to-transparent rounded-2xl"></div>
+          </div>
+        </div>
+
+        {/* FEATURES */}
+        <div className="max-w-7xl mx-auto px-4 pb-14 grid gap-6 md:grid-cols-2">
+
           {/* RENTALS */}
           <button
-            type="button"
-            onClick={() => navigate('/rentals')}
-            className="group flex h-full flex-col justify-between rounded-2xl border border-slate-700/80 bg-gradient-to-br from-slate-900 via-slate-900/90 to-sky-900/50 p-5 text-left shadow-xl shadow-sky-900/40 transition hover:-translate-y-1 hover:border-sky-400/80 hover:shadow-2xl"
+            onClick={() => navigate("/rentals")}
+            className="group flex flex-col justify-between rounded-2xl p-6 
+              bg-gradient-to-br from-sky-900/40 to-slate-900 
+              border border-sky-700/40
+              shadow-lg hover:shadow-sky-900/50
+              transition transform hover:-translate-y-1 text-left"
           >
-            <div className="space-y-2">
-              <p className="inline-flex items-center gap-2 rounded-full bg-sky-900/50 px-3 py-1 text-xs font-medium text-sky-200 ring-1 ring-sky-500/40">
-                <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
-                Rentals engine
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <Package size={26} className="text-sky-400" />
+                <h2 className="text-xl font-semibold">Rental System</h2>
+              </div>
+
+              <p className="text-gray-300 text-sm">
+                Rent laptops, cameras, lab tools, and more — or list your own items and earn.
               </p>
-              <h2 className="text-lg font-semibold text-slate-50">UniGear Rental System</h2>
-              <p className="text-sm text-slate-300">
-                Monetize idle electronics, lab gear, and sports equipment, or quickly find what you need.
-              </p>
+
+              <ul className="mt-4 space-y-2 text-sm text-gray-400">
+                <li>✔ Easy item listing</li>
+                <li>✔ Safe handover</li>
+                <li>✔ Flexible pricing</li>
+              </ul>
             </div>
-            <p className="mt-4 inline-flex items-center text-sm font-medium text-sky-300">
-              Explore rentals →
-            </p>
+
+            <div className="mt-6 inline-flex items-center text-sky-400 text-sm font-medium">
+              Explore Rentals <ArrowRight className="ml-2" size={16} />
+            </div>
           </button>
 
           {/* TASKS */}
           <button
-            type="button"
-            onClick={() => navigate('/tasks')}
-            className="group flex h-full flex-col justify-between rounded-2xl border border-slate-700/80 bg-gradient-to-br from-slate-900 via-slate-900/90 to-emerald-900/50 p-5 text-left shadow-xl shadow-emerald-900/40 transition hover:-translate-y-1 hover:border-emerald-400/80 hover:shadow-2xl"
+            onClick={() => navigate("/tasks")}
+            className="group flex flex-col justify-between rounded-2xl p-6 
+              bg-gradient-to-br from-emerald-900/40 to-slate-900 
+              border border-emerald-700/40
+              shadow-lg hover:shadow-emerald-900/50
+              transition transform hover:-translate-y-1 text-left"
           >
-            <div className="space-y-2">
-              <p className="inline-flex items-center gap-2 rounded-full bg-emerald-900/40 px-3 py-1 text-xs font-medium text-emerald-200 ring-1 ring-emerald-500/40">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                Micro-task engine
-              </p>
-              <h2 className="text-lg font-semibold text-slate-50">UniGear Micro-task System</h2>
-              <p className="text-sm text-slate-300">
-                Post errands or pick up quick gigs to earn between lectures.
-              </p>
-            </div>
-            <p className="mt-4 inline-flex items-center text-sm font-medium text-emerald-200">
-              View job board →
-            </p>
-          </button>
-        </section>
-      </div>
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <ListChecks size={26} className="text-emerald-400" />
+                <h2 className="text-xl font-semibold">Micro-task System</h2>
+              </div>
 
-      {/* FOOTER */}
-      <footer className="mt-10 border-t border-slate-700/70 pt-6 text-center">
-        <div className="space-y-2">
-          
-          <h3 className="text-lg font-semibold text-slate-100">
-            UniGear
-          </h3>
+              <p className="text-gray-300 text-sm">
+                Post errands or complete tasks and earn money between lectures.
+              </p>
+
+              <ul className="mt-4 space-y-2 text-sm text-gray-400">
+                <li>✔ Quick posting</li>
+                <li>✔ Instant earning</li>
+                <li>✔ Campus-based</li>
+              </ul>
+            </div>
+
+            <div className="mt-6 inline-flex items-center text-emerald-400 text-sm font-medium">
+              View Tasks <ArrowRight className="ml-2" size={16} />
+            </div>
+          </button>
+
+        </div>
+
+        {/* FOOTER */}
+        <footer className="border-t border-slate-700/70 py-6 text-center">
+          <h3 className="text-lg font-semibold text-slate-100">UniGear</h3>
 
           <p className="text-sm text-slate-400">
             Built for students — Rent, Share, and Earn smarter on campus.
           </p>
 
           <div className="flex justify-center gap-6 pt-3 text-sm text-slate-400">
-            <button
-              onClick={() => navigate('/rentals')}
-              className="hover:text-sky-400 transition"
-            >
+            <button onClick={() => navigate('/rentals')} className="hover:text-sky-400">
               Rentals
             </button>
-
-            <button
-              onClick={() => navigate('/tasks')}
-              className="hover:text-emerald-400 transition"
-            >
+            <button onClick={() => navigate('/tasks')} className="hover:text-emerald-400">
               Tasks
             </button>
-
-            <button
-              onClick={() => navigate('/feedback')}
-              className="hover:text-yellow-400 transition"
-            >
+            <button onClick={() => navigate('/feedback')} className="hover:text-yellow-400">
               Feedback
             </button>
           </div>
@@ -109,18 +144,17 @@ const Dashboard = () => {
           <p className="pt-4 text-xs text-slate-500">
             © {new Date().getFullYear()} UniGear. All rights reserved.
           </p>
+        </footer>
 
-        </div>
-      </footer>
-    </div>
-
-    {/* CHATBOT */}
-    {!isChatOpen && (
-      <div className="chatbot-icon" onClick={() => setIsChatOpen(true)}>
-        <span className="logo-part">🤖</span>
       </div>
-    )}
-    {isChatOpen && <Chatbot closeChat={() => setIsChatOpen(false)} />}
+
+      {/* CHATBOT */}
+      {!isChatOpen && (
+        <div className="chatbot-icon" onClick={() => setIsChatOpen(true)}>
+          🤖
+        </div>
+      )}
+      {isChatOpen && <Chatbot closeChat={() => setIsChatOpen(false)} />}
     </>
   );
 };
