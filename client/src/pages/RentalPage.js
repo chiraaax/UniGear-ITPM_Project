@@ -914,6 +914,7 @@ const RentalPage = () => {
                     </div>
                   </div>
                 )}
+                <p className="card-hint">Click to view details & ratings →</p>
               </div>
 
               <div className="modal-actions">

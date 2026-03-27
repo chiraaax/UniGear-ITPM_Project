@@ -268,7 +268,7 @@ const FeedbackAdminDashboard = () => {
                     onClick={() => handleDelete(feedback._id)}
                     title="Delete feedback"
                   >
-                    🗑️
+                    
                   </button>
                 </div>
               </div>

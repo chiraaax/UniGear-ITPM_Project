@@ -20,13 +20,16 @@ const feedbackSchema = new mongoose.Schema(
     },
     rating: {
       type: Number,
-      required: true,
       min: 1,
       max: 5,
     },
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
+    },
+    item: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Item',
     },
   },
   {
