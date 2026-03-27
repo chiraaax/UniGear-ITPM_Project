@@ -1,9 +1,14 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import { Package, ListChecks, ArrowRight, ShieldCheck, Users } from "lucide-react";
+import React, { useState, useEffect } from "react";
 import Chatbot from '../components/Chatbot';
 import '../styles/Chatbot.css';
-
+import { useNavigate } from "react-router-dom";
+import {
+  ShieldCheck,
+  Users,
+  Package,
+  ArrowRight,
+  ListChecks
+} from "lucide-react";
 const Dashboard = () => {
   const navigate = useNavigate();
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -127,14 +132,14 @@ const Dashboard = () => {
       </div>
     </div>
 
-    {/* CHATBOT */}
-    {!isChatOpen && (
-      <div className="chatbot-icon" onClick={() => setIsChatOpen(true)}>
-        <span className="logo-part">🤖</span>
-      </div>
-    )}
-    {isChatOpen && <Chatbot closeChat={() => setIsChatOpen(false)} />}
-    </>
+    // {/* CHATBOT */}
+    // {!isChatOpen && (
+    //   <div className="chatbot-icon" onClick={() => setIsChatOpen(true)}>
+    //     <span className="logo-part">🤖</span>
+    //   </div>
+    // )}
+    // {isChatOpen && <Chatbot closeChat={() => setIsChatOpen(false)} />}
+    // </>
   );
 };
 
