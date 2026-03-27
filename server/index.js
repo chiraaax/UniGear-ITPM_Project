@@ -10,6 +10,7 @@ const app = express();
 // Core middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Modular routes
 const rentalRoutes = require('./routes/rentals');
@@ -19,8 +20,10 @@ const userRoutes = require('./routes/users');
 const authRoutes = require('./routes/auth');
 const feedbackRoutes = require('./routes/feedback');
 const adminRoutes = require('./routes/admin');
+const uploadRoutes = require('./routes/upload');
 const chatbotRoutes = require('./routes/chatbot');
 
+//API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/rentals', rentalRoutes);
 app.use('/api/tasks', taskRoutes);

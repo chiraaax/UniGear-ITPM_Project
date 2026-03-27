@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, NavLink, Navigate, useLocation } from 'react-router-dom';
 import './App.css';
+import 'react-calendar/dist/Calendar.css';
 import Dashboard from './pages/Dashboard';
 import RentalPage from './pages/RentalPage';
 import TaskPage from './pages/TaskPage';
