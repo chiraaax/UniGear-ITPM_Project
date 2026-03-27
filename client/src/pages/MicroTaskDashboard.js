@@ -49,7 +49,7 @@ const TaskDashboard = () => {
       case "pending":
         return "bg-yellow-600";
       case "inprogress":
-        return "bg-blue-700";
+        return "bg-blue";
       case "completed":
         return "bg-green-500";
       default:
@@ -144,6 +144,8 @@ const TaskDashboard = () => {
                 <Folder size={16} /> {task.category}
               </div>
 
+              
+
               <div className="mt-2">
                 <span
                   className={`inline-flex items-center gap-1 px-3 py-1 text-xs rounded-full text-white ${getStatusStyle(
@@ -157,11 +159,11 @@ const TaskDashboard = () => {
               <button
                 onClick={() => navigate(`/task/${task._id}`)}
                 className="mt-4 w-full flex items-center justify-center gap-2 
-                         bg-gradient-to-r from-#80A3A5-800 from-#80A3A5-800
-                         hover:from-#80A3A5-600 hover:from-#80A3A5-600
-                        py-2 rounded-lg text-sm font-semibold text-white 
-                        border border-#80A3A5-800 bg-#80A3A5-800
-                        transition transform hover:scale-105"
+             py-2 rounded-lg text-sm font-semibold text-white 
+             border border-#80A3A5
+             bg-gradient-to-r from-emerald-500 to-#80A3A5
+             hover:from-#80A3A5 hover:to-#80A3A5
+             transition transform hover:scale-105"
               >
                 <Eye size={16} />
                 View Task
