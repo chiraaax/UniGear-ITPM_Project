@@ -8,33 +8,14 @@ const rentals = require("./routes/rentals");
 const transactions = require("./routes/transactions");
 const users = require("./routes/users");
 const authRoutes = require("./routes/auth");
+const feedbackRoutes = require("./routes/feedback");
+const ratingsRoutes = require("./routes/ratings");
 const requestRoutes = require("./routes/requestRoutes");
-
-const express = require('express');
-const cors = require('cors');
 
 const app = express();
 
-// ✅ VERY IMPORTANT (MUST HAVE)
-app.use(express.json());
-
-// ✅ CORS (MUST HAVE)
-app.use(cors());
-
-// ✅ ROUTES (MUST HAVE)
-const requestRoutes = require('./routes/requestRoutes');
-app.use('/api/requests', requestRoutes);
-
-// (optional other routes)
-app.use('/api/tasks', require('./routes/taskRoutes'));
-
-app.listen(5000, () => {
-  console.log('🚀 Server running on port 5000');
-});
-
-
-
 // Middleware
+app.use(express.json());
 app.use(cors());
 app.use(bodyParser.json());
 
@@ -45,7 +26,9 @@ app.use("/api/rentals", rentals);
 app.use("/api/transactions", transactions);
 app.use("/api/users", users);
 app.use("/api/auth", authRoutes);
-app.use('/api/requests', requestRoutes);
+app.use("/api/feedback", feedbackRoutes);
+app.use("/api/ratings", ratingsRoutes);
+app.use("/api/requests", requestRoutes);
 
 // Connect to MongoDB Atlas
 mongoose

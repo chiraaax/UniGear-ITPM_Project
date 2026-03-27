@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { MapPin, DollarSign, Folder, CheckCircle } from "lucide-react";
 import { Eye } from "lucide-react";
@@ -15,7 +15,7 @@ const TaskDashboard = () => {
   const navigate = useNavigate();
 
   // ================= FETCH TASKS =================
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
       let query = new URLSearchParams();
       if (search.trim()) query.append("search", search.trim());
@@ -34,11 +34,11 @@ const TaskDashboard = () => {
     } catch (error) {
       console.error("Error fetching tasks:", error);
     }
-  };
+  }, [search, category, status]);
 
   useEffect(() => {
     fetchTasks();
-  }, [search, category, status]);
+  }, [fetchTasks]);
 
   const handlePostTask = () => {
     navigate("/tasks");

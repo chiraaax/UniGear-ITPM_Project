@@ -1,9 +1,12 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Package, ListChecks, ArrowRight, ShieldCheck, Users } from "lucide-react";
+import Chatbot from '../components/Chatbot';
+import '../styles/Chatbot.css';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0b1a2a] to-[#0f2a44] text-white">
@@ -123,6 +126,15 @@ const Dashboard = () => {
 
       </div>
     </div>
+
+    {/* CHATBOT */}
+    {!isChatOpen && (
+      <div className="chatbot-icon" onClick={() => setIsChatOpen(true)}>
+        <span className="logo-part">🤖</span>
+      </div>
+    )}
+    {isChatOpen && <Chatbot closeChat={() => setIsChatOpen(false)} />}
+    </>
   );
 };
 

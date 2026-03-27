@@ -41,7 +41,7 @@ const EditItem = () => {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [id, token]);
+  }, [id, token, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

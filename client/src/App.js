@@ -27,6 +27,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import FeedbackDisplayPage from "./pages/FeedbackDisplayPage";
 import FeedbackAdminDashboard from "./pages/FeedbackAdminDashboard";
+import TestimonialsPage from './pages/TestimonialsPage';
+
 
 const AdminProtectedRoute = ({ children }) => {
   const { user } = useAuth();
@@ -279,7 +281,8 @@ function App() {
             <Route path="/edit-task/:id" element={<EditTask />} />
             <Route path="/edit-item/:id" element={<EditItem />} />
             <Route path="/feedback" element={<FeedbackPage />} />
-            <Route path="/feedbacks" element={<FeedbackDisplayPage />} />
+            <Route path="/feedbacks" element={<TestimonialsPage />} />
+            <Route path="/testimonials" element={<TestimonialsPage />} />
             <Route path="/admin/login" element={<AdminLoginPage />} />
             <Route
               path="/admin"
