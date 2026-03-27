@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
 const API_BASE = "http://localhost:5000/api";
@@ -12,7 +12,7 @@ const TaskDashboard = () => {
   const navigate = useNavigate();
 
   // ================= FETCH TASKS =================
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
       let query = new URLSearchParams();
 
@@ -28,11 +28,11 @@ const TaskDashboard = () => {
     } catch (error) {
       console.error("Error fetching tasks:", error);
     }
-  };
+  }, [search, category, status]);
 
   useEffect(() => {
     fetchTasks();
-  }, [search, category, status]);
+  }, [fetchTasks]);
 
   const handlePostTask = () => {
     navigate("/tasks");

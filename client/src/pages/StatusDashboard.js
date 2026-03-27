@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -11,7 +11,6 @@ const StatusDashboard = () => {
   const [profile, setProfile] = useState(null);
   const [myItems, setMyItems] = useState([]);
   const [myTasks, setMyTasks] = useState([]);
-  const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState(null);
   const [completing, setCompleting] = useState(false);
@@ -25,15 +24,7 @@ const StatusDashboard = () => {
     setTimeout(() => setNotification(null), 3000);
   };
 
-  useEffect(() => {
-    if (!token) {
-      navigate("/auth");
-      return;
-    }
-    loadData();
-  }, [token]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const headers = { Authorization: `Bearer ${token}` };
       const [meRes, itemsRes, tasksRes, txRes] = await Promise.all([
@@ -43,7 +34,7 @@ const StatusDashboard = () => {
         fetch(`${API_BASE}/transactions`, { headers }),
       ]);
 
-      const [me, items, tasks, txs] = await Promise.all([
+      const [me, items, tasks] = await Promise.all([
         meRes.json(),
         itemsRes.json(),
         tasksRes.json(),
@@ -53,13 +44,20 @@ const StatusDashboard = () => {
       setProfile(me);
       setMyItems(Array.isArray(items) ? items : []);
       setMyTasks(Array.isArray(tasks) ? tasks : []);
-      setTransactions(Array.isArray(txs) ? txs : []);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) {
+      navigate("/auth");
+      return;
+    }
+    loadData();
+  }, [token, navigate, loadData]);
 
   // ========== ITEMS ==========
   const handleDeleteItem = async (id) => {

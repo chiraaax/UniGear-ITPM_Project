@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ItemDetailModal from '../components/ItemDetailModal';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
 
@@ -9,6 +10,8 @@ const RentalPage = () => {
   const navigate = useNavigate();
 
   const [items, setItems] = useState([]);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -33,6 +36,16 @@ const RentalPage = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const openModal = (item) => {
+    setSelectedItem(item);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setSelectedItem(null);
   };
 
   const handleSubmit = async (e) => {
@@ -123,7 +136,12 @@ const RentalPage = () => {
           <h2>Available Items Near Campus</h2>
           <div className="list-grid">
             {items.map((item) => (
-              <div key={item._id} className="list-card">
+              <div 
+                key={item._id} 
+                className="list-card" 
+                onClick={() => openModal(item)}
+                style={{ cursor: 'pointer' }}
+              >
                 <h3>{item.title}</h3>
                 <p className="tag">{item.category}</p>
                 <p className="muted">LKR {item.dailyRate} / day</p>
@@ -132,12 +150,15 @@ const RentalPage = () => {
                     Owner: {item.owner.name} (Trust {item.owner.trustScore?.toFixed(1)})
                   </p>
                 )}
+                <p className="card-hint">Click to view details & ratings →</p>
               </div>
             ))}
             {items.length === 0 && <p className="muted">No items listed yet.</p>}
           </div>
         </section>
       </div>
+
+      <ItemDetailModal item={selectedItem} isOpen={modalOpen} onClose={closeModal} />
     </div>
   );
 };

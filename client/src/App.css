@@ -296,6 +296,13 @@
   font-size: 1rem;
 }
 
+.card-hint {
+  font-size: 0.75rem;
+  color: #60a5fa;
+  margin-top: 0.5rem;
+  font-style: italic;
+}
+
 .tag {
   display: inline-flex;
   align-items: center;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
@@ -14,7 +14,7 @@ const TaskStatusTracking = () => {
   });
   const [loading, setLoading] = useState(true);
 
-  const fetchTaskStats = async () => {
+  const fetchTaskStats = useCallback(async () => {
     try {
       setLoading(true);
       const headers = { Authorization: `Bearer ${token}` };
@@ -51,13 +51,13 @@ const TaskStatusTracking = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     if (token) {
       fetchTaskStats();
     }
-  }, [token]);
+  }, [token, fetchTaskStats]);
 
   if (!token) {
     return (

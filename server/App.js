@@ -8,6 +8,8 @@ const rentals = require("./routes/rentals");
 const transactions = require("./routes/transactions");
 const users = require("./routes/users");
 const authRoutes = require("./routes/auth");
+const feedbackRoutes = require("./routes/feedback");
+const ratingsRoutes = require("./routes/ratings");
 
 const app = express();
 
@@ -22,6 +24,8 @@ app.use("/api/rentals", rentals);
 app.use("/api/transactions", transactions);
 app.use("/api/users", users);
 app.use("/api/auth", authRoutes);
+app.use("/api/feedback", feedbackRoutes);
+app.use("/api/ratings", ratingsRoutes);
 
 // Connect to MongoDB Atlas
 mongoose
