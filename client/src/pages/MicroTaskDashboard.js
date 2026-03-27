@@ -11,6 +11,8 @@ const TaskDashboard = () => {
 
   const navigate = useNavigate();
 
+  
+
   // ================= FETCH TASKS =================
   const fetchTasks = async () => {
     try {
@@ -24,7 +26,11 @@ const TaskDashboard = () => {
       const res = await fetch(url);
       const data = await res.json();
 
-      setTasks(Array.isArray(data) ? data : []);
+      setTasks(
+  Array.isArray(data)
+    ? data.filter(task => task.moderationStatus === "approved")
+    : []
+);
     } catch (error) {
       console.error("Error fetching tasks:", error);
     }
