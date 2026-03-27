@@ -172,7 +172,7 @@ const handleAcceptTask = async () => {
             Back
           </button>
 
-          {/* ✅ Accept Task Button */}
+          {/* Accept Task Button */}
           {canAccept && (
             <button
               onClick={handleAcceptTask}
