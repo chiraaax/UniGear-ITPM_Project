@@ -22,7 +22,7 @@ const TaskStatusTracking = () => {
   });
   const [loading, setLoading] = useState(true);
 
-  const fetchTaskStats = async () => {
+  const fetchTaskStats = React.useCallback(async () => {
     try {
       setLoading(true);
       const headers = { Authorization: `Bearer ${token}` };
@@ -55,11 +55,11 @@ const TaskStatusTracking = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     if (token) fetchTaskStats();
-  }, [token]);
+  }, [token, fetchTaskStats]);
 
   if (!token) {
     return (

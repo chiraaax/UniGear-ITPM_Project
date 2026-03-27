@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import '../styles/FeedbackPage.css';
 
 const FeedbackPage = () => {
   const [form, setForm] = useState({
@@ -14,6 +15,7 @@ const FeedbackPage = () => {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [showFeedbacks, setShowFeedbacks] = useState(false);
   const { token } = useAuth();
@@ -42,7 +44,31 @@ const FeedbackPage = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    let processedValue = value;
+    let newErrors = { ...errors };
+
+    // Phone number validation: only allow digits, max 10 characters
+    if (name === 'phone') {
+      processedValue = value.replace(/[^0-9]/g, '').slice(0, 10);
+      if (processedValue.length > 0 && processedValue.length < 10) {
+        newErrors.phone = `Phone number must be exactly 10 digits (${processedValue.length}/10)`;
+      } else {
+        newErrors.phone = '';
+      }
+    }
+
+    // Email validation
+    if (name === 'email') {
+      const emailRegex = /^[^\s@]+@gmail\.com$/;
+      if (value && !emailRegex.test(value)) {
+        newErrors.email = 'Please enter a valid Gmail address (example@gmail.com)';
+      } else {
+        newErrors.email = '';
+      }
+    }
+
+    setErrors(newErrors);
+    setForm((prev) => ({ ...prev, [name]: processedValue }));
   };
 
   const handleRating = (rating) => {
@@ -51,10 +77,32 @@ const FeedbackPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.phone || !form.feedback || form.rating === 0) {
-      setError('Please fill all fields and select a rating.');
+    const newErrors = {};
+
+    if (!form.name.trim()) newErrors.name = 'Name is required';
+    
+    const emailRegex = /^[^\s@]+@gmail\.com$/;
+    if (!form.email) {
+      newErrors.email = 'Email is required';
+    } else if (!emailRegex.test(form.email)) {
+      newErrors.email = 'Please enter a valid Gmail address (example@gmail.com)';
+    }
+
+    if (!form.phone) {
+      newErrors.phone = 'Phone number is required';
+    } else if (form.phone.length !== 10) {
+      newErrors.phone = 'Phone number must be exactly 10 digits';
+    }
+
+    if (!form.feedback.trim()) newErrors.feedback = 'Feedback is required';
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      setError('Please fix all errors before submitting');
       return;
     }
+
     setLoading(true);
     try {
       const response = await fetch('/api/feedback', {
@@ -68,6 +116,8 @@ const FeedbackPage = () => {
       if (response.ok) {
         alert('Thank you for your feedback! You will receive an SMS confirmation shortly.');
         setForm({ name: '', email: '', phone: '', feedback: '', rating: 0 });
+        setErrors({});
+        setError('');
         if (token) fetchFeedbacks();
       } else {
         setError('Failed to submit feedback');
@@ -136,14 +186,13 @@ const FeedbackPage = () => {
     return Array.from({ length: 5 }, (_, i) => {
       const starNumber = i + 1;
       const isSelected = starNumber <= rating;
-      const color = rating === 1 ? 'text-red-500' : 'text-yellow-500';
       return (
         <button
           key={starNumber}
           type="button"
           onClick={onClick ? () => onClick(starNumber) : undefined}
           disabled={!onClick}
-          className={`text-lg ${isSelected ? color : 'text-gray-400'} ${onClick ? 'hover:text-yellow-500' : ''}`}
+          className={`feedback-star-btn ${isSelected ? 'selected' : ''}`}
         >
           ★
         </button>
@@ -152,191 +201,230 @@ const FeedbackPage = () => {
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 md:px-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-50">Share Your Feedback</h1>
-        <Link
-          to="/feedbacks"
-          className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-slate-50 hover:bg-slate-600 transition"
-        >
-          View Feedback Display
-        </Link>
-      </div>
-      <div className="mb-8 rounded-2xl border border-slate-700/80 bg-slate-900/60 p-6 shadow-xl">
-        <h1 className="mb-6 text-2xl font-semibold text-slate-50">Share Your Feedback</h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-300">Name</label>
-            <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-50 focus:border-sky-400 focus:outline-none"
-              placeholder="Your name"
-            />
+    <div className="feedback-wrapper">
+      <div className="feedback-container">
+        <div className="feedback-header">
+          <div className="feedback-header-top">
+            <h1 className="feedback-title">Share Your Feedback</h1>
+            <Link to="/feedbacks" className="feedback-btn-link">
+              View Feedback Display
+            </Link>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300">Email</label>
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-50 focus:border-sky-400 focus:outline-none"
-              placeholder="your.email@example.com"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300">Phone Number</label>
-            <input
-              type="tel"
-              name="phone"
-              value={form.phone}
-              onChange={handleChange}
-              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-50 focus:border-sky-400 focus:outline-none"
-              placeholder="+94712345678"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300">Feedback</label>
-            <textarea
-              name="feedback"
-              value={form.feedback}
-              onChange={handleChange}
-              rows="4"
-              className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-50 focus:border-sky-400 focus:outline-none"
-              placeholder="Tell us what you think..."
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300">Rating</label>
-            <div className="mt-1 flex space-x-1">
-              {renderStars(form.rating, handleRating)}
-            </div>
-          </div>
-          {error && <p className="text-red-400">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-sky-500 py-2 font-medium text-slate-950 hover:bg-sky-400 focus:outline-none disabled:opacity-50"
-          >
-            {loading ? 'Submitting...' : 'Submit Feedback'}
-          </button>
-        </form>
-      </div>
-
-      {token && (
-        <div className="mb-6 flex justify-center">
-          <button
-            onClick={() => {
-              const newShowState = !showFeedbacks;
-              setShowFeedbacks(newShowState);
-              if (newShowState && feedbacks.length === 0) {
-                fetchFeedbacks();
-              }
-            }}
-            className="rounded-lg bg-blue-600 px-6 py-2 font-medium text-white hover:bg-blue-500 focus:outline-none"
-          >
-            {showFeedbacks ? 'Hide Feedbacks' : 'View All Feedbacks'}
-          </button>
         </div>
-      )}
 
-      {token && showFeedbacks && (
-        <div className="rounded-2xl border border-slate-700/80 bg-slate-900/60 p-6 shadow-xl">
-          <h2 className="mb-6 text-xl font-semibold text-slate-50">All Feedback</h2>
-          {feedbacks.length === 0 ? (
-            <p className="text-slate-400">No feedback yet.</p>
-          ) : (
-            <div className="space-y-4">
-              {feedbacks.map((fb) => (
-                <div key={fb._id} className="rounded-lg border border-slate-600 bg-slate-800 p-4">
-                  {editingId === fb._id ? (
-                    <div className="space-y-3">
-                      <input
-                        type="text"
-                        name="name"
-                        value={editForm.name}
-                        onChange={handleEditChange}
-                        className="w-full rounded border border-slate-600 bg-slate-700 px-2 py-1 text-slate-50"
-                      />
-                      <input
-                        type="email"
-                        name="email"
-                        value={editForm.email}
-                        onChange={handleEditChange}
-                        className="w-full rounded border border-slate-600 bg-slate-700 px-2 py-1 text-slate-50"
-                      />
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={editForm.phone}
-                        onChange={handleEditChange}
-                        className="w-full rounded border border-slate-600 bg-slate-700 px-2 py-1 text-slate-50"
-                      />
-                      <textarea
-                        name="feedback"
-                        value={editForm.feedback}
-                        onChange={handleEditChange}
-                        rows="3"
-                        className="w-full rounded border border-slate-600 bg-slate-700 px-2 py-1 text-slate-50"
-                      />
-                      <div className="flex space-x-1">
-                        {renderStars(editForm.rating, handleEditRating)}
-                      </div>
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={handleUpdate}
-                          className="rounded bg-green-500 px-3 py-1 text-white hover:bg-green-400"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => setEditingId(null)}
-                          className="rounded bg-gray-500 px-3 py-1 text-white hover:bg-gray-400"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-slate-50">{fb.name}</h3>
-                        <div className="flex space-x-2">
+        <div className="feedback-form-wrapper">
+          <h2 className="feedback-form-title">Tell Us Your Experience</h2>
+          <form onSubmit={handleSubmit} className="feedback-form">
+            <div className="feedback-field">
+              <label className="feedback-label">Name</label>
+              <input
+                type="text"
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                className={`feedback-input ${errors.name ? 'error' : ''}`}
+                placeholder="Your name"
+              />
+              {errors.name && <p className="feedback-error">{errors.name}</p>}
+            </div>
+            <div className="feedback-field">
+              <label className="feedback-label">Email (Gmail only)</label>
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                className={`feedback-input ${errors.email ? 'error' : ''}`}
+                placeholder="example@gmail.com"
+              />
+              {errors.email && <p className="feedback-error">{errors.email}</p>}
+            </div>
+            <div className="feedback-field">
+              <label className="feedback-label">Phone Number (10 digits only)</label>
+              <input
+                type="text"
+                name="phone"
+                value={form.phone}
+                onChange={handleChange}
+                maxLength="10"
+                className={`feedback-input ${errors.phone ? 'error' : ''}`}
+                placeholder="1234567890"
+              />
+              {errors.phone && <p className="feedback-error">{errors.phone}</p>}
+            </div>
+            <div className="feedback-field">
+              <label className="feedback-label">Feedback</label>
+              <textarea
+                name="feedback"
+                value={form.feedback}
+                onChange={handleChange}
+                rows="4"
+                className={`feedback-textarea ${errors.feedback ? 'error' : ''}`}
+                placeholder="Tell us what you think..."
+              />
+              {errors.feedback && <p className="feedback-error">{errors.feedback}</p>}
+            </div>
+            <div className="feedback-rating-section">
+              <label className="feedback-rating-label">Rating (Optional)</label>
+              <div className="feedback-star-selector">
+                {renderStars(form.rating, handleRating)}
+              </div>
+            </div>
+            {error && <div className="feedback-error-message">{error}</div>}
+            <button
+              type="submit"
+              disabled={loading}
+              className="feedback-submit-btn"
+            >
+              {loading ? 'Submitting...' : 'Submit Feedback'}
+            </button>
+          </form>
+        </div>
+
+        {token && (
+          <div style={{ textAlign: 'center', marginTop: '30px' }}>
+            <button
+              onClick={() => {
+                const newShowState = !showFeedbacks;
+                setShowFeedbacks(newShowState);
+                if (newShowState && feedbacks.length === 0) {
+                  fetchFeedbacks();
+                }
+              }}
+              className="feedback-view-btn"
+            >
+              {showFeedbacks ? 'Hide Feedbacks' : 'View All Feedbacks'}
+            </button>
+          </div>
+        )}
+
+        {token && showFeedbacks && (
+          <div className="feedback-list-wrapper">
+            <h2 className="feedback-list-title">All Feedback</h2>
+            {feedbacks.length === 0 ? (
+              <p className="feedback-list-empty">No feedback yet.</p>
+            ) : (
+              <div className="feedback-list">
+                {feedbacks.map((fb) => (
+                  <div key={fb._id} className="feedback-item">
+                    {editingId === fb._id ? (
+                      <div className="space-y-3">
+                        <input
+                          type="text"
+                          name="name"
+                          value={editForm.name}
+                          onChange={handleEditChange}
+                          className="feedback-input"
+                        />
+                        <input
+                          type="email"
+                          name="email"
+                          value={editForm.email}
+                          onChange={handleEditChange}
+                          className="feedback-input"
+                        />
+                        <input
+                          type="tel"
+                          name="phone"
+                          value={editForm.phone}
+                          onChange={handleEditChange}
+                          className="feedback-input"
+                        />
+                        <textarea
+                          name="feedback"
+                          value={editForm.feedback}
+                          onChange={handleEditChange}
+                          rows="3"
+                          className="feedback-textarea"
+                        />
+                        <div className="feedback-star-selector" style={{ marginTop: '10px' }}>
+                          {renderStars(editForm.rating, handleEditRating)}
+                        </div>
+                        <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
                           <button
-                            onClick={() => handleEdit(fb)}
-                            className="rounded bg-blue-500 px-2 py-1 text-xs text-white hover:bg-blue-400"
+                            onClick={handleUpdate}
+                            style={{
+                              flex: 1,
+                              padding: '10px',
+                              background: '#16a34a',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              fontWeight: '600',
+                            }}
                           >
-                            Edit
+                            Save
                           </button>
                           <button
-                            onClick={() => handleDelete(fb._id)}
-                            className="rounded bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-400"
+                            onClick={() => setEditingId(null)}
+                            style={{
+                              flex: 1,
+                              padding: '10px',
+                              background: '#718096',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              fontWeight: '600',
+                            }}
                           >
-                            Delete
+                            Cancel
                           </button>
                         </div>
                       </div>
-                      <p className="text-sm text-slate-400">{fb.email}</p>
-                      <p className="text-sm text-slate-400">{fb.phone}</p>
-                      <p className="mt-2 text-slate-300">{fb.feedback}</p>
-                      <div className="mt-2 flex items-center space-x-1">
-                        {renderStars(fb.rating)}
-                        <span className="text-sm text-slate-400">({fb.rating}/5)</span>
+                    ) : (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                          <div>
+                            <p className="feedback-item-name">{fb.name}</p>
+                            <p className="feedback-item-email">{fb.email}</p>
+                            {fb.rating && <p className="feedback-item-rating">★ {fb.rating}/5</p>}
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              onClick={() => handleEdit(fb)}
+                              style={{
+                                padding: '6px 12px',
+                                background: '#667eea',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '0.85rem',
+                                fontWeight: '600',
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(fb._id)}
+                              style={{
+                                padding: '6px 12px',
+                                background: '#dc2626',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '0.85rem',
+                                fontWeight: '600',
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                        <p className="feedback-item-text">{fb.feedback}</p>
+                        <p className="feedback-item-date">{new Date(fb.createdAt).toLocaleDateString()}</p>
                       </div>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {new Date(fb.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

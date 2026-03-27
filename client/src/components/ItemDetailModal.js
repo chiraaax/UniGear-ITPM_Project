@@ -16,6 +16,7 @@ const ItemDetailModal = ({ item, isOpen, onClose }) => {
   });
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [errors, setErrors] = useState({});
 
   const fetchFeedbacks = useCallback(async () => {
     if (!item) return;
@@ -41,7 +42,33 @@ const ItemDetailModal = ({ item, isOpen, onClose }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    let processedValue = value;
+    let newErrors = { ...errors };
+
+    // Phone number validation: only allow digits, max 10 characters
+    if (name === 'phone') {
+      processedValue = value.replace(/[^0-9]/g, '').slice(0, 10);
+      if (processedValue.length > 0 && processedValue.length < 10) {
+        newErrors.phone = `Phone number must be exactly 10 digits (${processedValue.length}/10)`;
+      } else if (processedValue.length === 10) {
+        newErrors.phone = '';
+      } else {
+        newErrors.phone = '';
+      }
+    }
+
+    // Email validation
+    if (name === 'email') {
+      const emailRegex = /^[^\s@]+@gmail\.com$/;
+      if (value && !emailRegex.test(value)) {
+        newErrors.email = 'Please enter a valid Gmail address (example@gmail.com)';
+      } else {
+        newErrors.email = '';
+      }
+    }
+
+    setErrors(newErrors);
+    setForm((prev) => ({ ...prev, [name]: processedValue }));
   };
 
   const handleRating = (rating) => {
@@ -51,8 +78,38 @@ const ItemDetailModal = ({ item, isOpen, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!form.name || !form.email || !form.phone || !form.feedback) {
-      alert('Please fill in all fields');
+    const newErrors = {};
+
+    // Validate name
+    if (!form.name.trim()) {
+      newErrors.name = 'Name is required';
+    }
+
+    // Validate email
+    const emailRegex = /^[^\s@]+@gmail\.com$/;
+    if (!form.email) {
+      newErrors.email = 'Email is required';
+    } else if (!emailRegex.test(form.email)) {
+      newErrors.email = 'Please enter a valid Gmail address (example@gmail.com)';
+    }
+
+    // Validate phone
+    if (!form.phone) {
+      newErrors.phone = 'Phone number is required';
+    } else if (form.phone.length !== 10 || isNaN(form.phone)) {
+      newErrors.phone = 'Phone number must be exactly 10 digits';
+    }
+
+    // Validate feedback
+    if (!form.feedback.trim()) {
+      newErrors.feedback = 'Feedback is required';
+    }
+
+    setErrors(newErrors);
+
+    // Stop if there are validation errors
+    if (Object.keys(newErrors).length > 0) {
+      alert('Please fix all errors before submitting');
       return;
     }
 
@@ -77,6 +134,7 @@ const ItemDetailModal = ({ item, isOpen, onClose }) => {
       if (response.ok) {
         setSuccessMessage('Thank you for your feedback!');
         setForm({ name: '', email: '', phone: '', feedback: '', rating: 0 });
+        setErrors({});
         await fetchFeedbacks();
         setTimeout(() => setSuccessMessage(''), 3000);
       } else {
@@ -176,32 +234,39 @@ const ItemDetailModal = ({ item, isOpen, onClose }) => {
                   value={form.name}
                   onChange={handleChange}
                   placeholder="Your name"
+                  className={errors.name ? 'error' : ''}
                   required
                 />
+                {errors.name && <span className="error-message">{errors.name}</span>}
               </label>
 
               <label>
-                Email
+                Email (Gmail only)
                 <input
                   type="email"
                   name="email"
                   value={form.email}
                   onChange={handleChange}
-                  placeholder="Your email"
+                  placeholder="example@gmail.com"
+                  className={errors.email ? 'error' : ''}
                   required
                 />
+                {errors.email && <span className="error-message">{errors.email}</span>}
               </label>
 
               <label>
-                Phone
+                Phone (10 digits only)
                 <input
-                  type="tel"
+                  type="text"
                   name="phone"
                   value={form.phone}
                   onChange={handleChange}
-                  placeholder="Your phone number"
+                  placeholder="1234567890"
+                  maxLength="10"
+                  className={errors.phone ? 'error' : ''}
                   required
                 />
+                {errors.phone && <span className="error-message">{errors.phone}</span>}
               </label>
 
               <label>
@@ -228,8 +293,10 @@ const ItemDetailModal = ({ item, isOpen, onClose }) => {
                   onChange={handleChange}
                   placeholder="Share your experience with this item..."
                   rows="5"
+                  className={errors.feedback ? 'error' : ''}
                   required
                 ></textarea>
+                {errors.feedback && <span className="error-message">{errors.feedback}</span>}
               </label>
 
               <button type="submit" disabled={submitting} className="submit-btn">
