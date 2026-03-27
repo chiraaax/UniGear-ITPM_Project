@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -15,12 +15,8 @@ const TaskDetail = () => {
   const [accepting, setAccepting] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchTask();
-  }, [id]);
-
   // ✅ Fetch task (using single task endpoint)
-  const fetchTask = async () => {
+  const fetchTask = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -35,7 +31,11 @@ const TaskDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchTask();
+  }, [fetchTask]);
 
  // ✅ Accept Task
 const handleAcceptTask = async () => {
@@ -172,7 +172,7 @@ const handleAcceptTask = async () => {
             Back
           </button>
 
-          {/* ✅ Accept Task Button */}
+          {/* Accept Task Button */}
           {canAccept && (
             <button
               onClick={handleAcceptTask}

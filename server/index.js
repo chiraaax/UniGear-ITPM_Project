@@ -10,6 +10,7 @@ const app = express();
 // Core middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Modular routes
 const rentalRoutes = require('./routes/rentals');
@@ -19,7 +20,10 @@ const userRoutes = require('./routes/users');
 const authRoutes = require('./routes/auth');
 const feedbackRoutes = require('./routes/feedback');
 const adminRoutes = require('./routes/admin');
+const uploadRoutes = require('./routes/upload');
+const chatbotRoutes = require('./routes/chatbot');
 
+//API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/rentals', rentalRoutes);
 app.use('/api/tasks', taskRoutes);
@@ -27,6 +31,7 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 
 // Simple health check
 app.get('/api/health', (req, res) => {
