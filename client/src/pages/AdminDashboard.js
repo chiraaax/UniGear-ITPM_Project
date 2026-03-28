@@ -11,7 +11,6 @@ import {
   CheckCircle,
   XCircle,
   Edit,
-  Delete,
   Eye,
   Shield,
   Users,
@@ -20,14 +19,11 @@ import {
   AlertTriangle,
   UserCheck,
   UserX,
-  ChevronDown,
   RefreshCw,
   Activity,
   TrendingUp,
   Calendar,
   User,
-  Mail,
-  FileText,
   Settings,
   LogIn,
   LogOut,
@@ -36,8 +32,6 @@ import {
   Star,
   Flag,
   Plus,
-  Minus,
-  ExternalLink
 } from 'lucide-react';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
@@ -302,6 +296,8 @@ const loadAuditLogs = useCallback(async (overrideFilters = null) => {
         const ninetyDaysAgo = new Date(now);
         ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
         fromDate = ninetyDaysAgo.toISOString().split('T')[0];
+        break;
+      default:
         break;
     }
   }
@@ -681,6 +677,7 @@ const loadAuditLogs = useCallback(async (overrideFilters = null) => {
     pushToast('success', 'View saved', `"${name}" has been saved`);
   };
 
+  /*
   const deleteSelectedAuditView = () => {
     if (!selectedSavedAuditViewId) return;
     const viewToDelete = savedAuditViews.find(v => v.id === selectedSavedAuditViewId);
@@ -690,6 +687,7 @@ const loadAuditLogs = useCallback(async (overrideFilters = null) => {
     setSelectedSavedAuditViewId('');
     pushToast('success', 'View deleted', `"${viewToDelete?.name}" has been deleted`);
   };
+  */
 
   const applySavedAuditView = (view) => {
     const nextFilters = {

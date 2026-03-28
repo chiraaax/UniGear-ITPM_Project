@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -15,27 +15,27 @@ const TaskDetail = () => {
   const [accepting, setAccepting] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchTask();
-  }, [id]);
-
   // ✅ Fetch task (using single task endpoint)
-  const fetchTask = async () => {
+  const fetchTask = React.useCallback(async () => {
     try {
       setLoading(true);
 
       const res = await fetch(`${API_BASE}/tasks/${id}`);
       if (!res.ok) throw new Error('Failed to fetch task');
 
-      const task = await res.json();
-      setTask(task);
+      const taskData = await res.json();
+      setTask(taskData);
     } catch (err) {
       console.error(err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchTask();
+  }, [fetchTask]);
 
  // ✅ Accept Task
 const handleAcceptTask = async () => {
