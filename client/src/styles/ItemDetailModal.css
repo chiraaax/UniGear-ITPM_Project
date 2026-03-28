@@ -303,6 +303,21 @@
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+/* Error Message Styling */
+.error-message {
+  color: #dc2626;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-top: 3px;
+  display: block;
+}
+
+.feedback-form input.error,
+.feedback-form textarea.error {
+  border-color: #dc2626;
+  background-color: #fef2f2;
+}
+
 .rating-selector {
   display: flex;
   gap: 10px;

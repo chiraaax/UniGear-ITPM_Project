@@ -16,15 +16,15 @@ const TaskDetail = () => {
   const [error, setError] = useState('');
 
   // ✅ Fetch task (using single task endpoint)
-  const fetchTask = useCallback(async () => {
+  const fetchTask = React.useCallback(async () => {
     try {
       setLoading(true);
 
       const res = await fetch(`${API_BASE}/tasks/${id}`);
       if (!res.ok) throw new Error('Failed to fetch task');
 
-      const task = await res.json();
-      setTask(task);
+      const taskData = await res.json();
+      setTask(taskData);
     } catch (err) {
       console.error(err);
       setError(err.message);
