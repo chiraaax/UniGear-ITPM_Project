@@ -1,13 +1,6 @@
-import React, { useEffect, useState } from "react";
-import { useAuth } from "../context/AuthContext";
-import {
-  ClipboardList,
-  Clock,
-  Loader,
-  CheckCircle,
-  Folder,
-  BarChart3,
-} from "lucide-react";
+import React, { useEffect, useState, useCallback } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { BarChart3, ClipboardList } from 'lucide-react';
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000/api";
 
@@ -32,6 +25,7 @@ const TaskStatusTracking = () => {
 
       const tasks = await res.json();
 
+      // Calculate statistics
       const stats = {
         total: tasks.length,
         pending: 0,
@@ -41,11 +35,13 @@ const TaskStatusTracking = () => {
       };
 
       tasks.forEach((task) => {
-        if (task.status === "Pending") stats.pending++;
-        else if (task.status === "In Progress") stats.inProgress++;
-        else if (task.status === "Completed") stats.completed++;
+        // Count by status
+        if (task.status === 'Pending') stats.pending++;
+        else if (task.status === 'In Progress') stats.inProgress++;
+        else if (task.status === 'Completed') stats.completed++;
 
-        const cat = task.category || "Uncategorized";
+        // Count by category
+        const cat = task.category || 'Uncategorized';
         stats.byCategory[cat] = (stats.byCategory[cat] || 0) + 1;
       });
 
@@ -96,40 +92,25 @@ const TaskStatusTracking = () => {
                 <p className="text-3xl font-bold">{taskStats.total}</p>
               </div>
 
-              {/* PENDING */}
-              <div className="bg-yellow-900/20 p-5 rounded-2xl border border-yellow-700/30 shadow-lg hover:scale-105 transition">
-                <div className="flex items-center gap-3 mb-2">
-                  <Clock className="text-yellow-400" />
-                  <p className="text-yellow-300">Pending</p>
-                </div>
-                <p className="text-3xl font-bold text-yellow-400">{taskStats.pending}</p>
-              </div>
-
-              {/* IN PROGRESS */}
-              <div className="bg-blue-900/20 p-5 rounded-2xl border border-blue-700/30 shadow-lg hover:scale-105 transition">
-                <div className="flex items-center gap-3 mb-2">
-                  <Loader className="text-blue-400" />
-                  <p className="text-blue-300">In Progress</p>
-                </div>
-                <p className="text-3xl font-bold text-blue-400">{taskStats.inProgress}</p>
-              </div>
-
-              {/* COMPLETED */}
-              <div className="bg-green-900/20 p-5 rounded-2xl border border-green-700/30 shadow-lg hover:scale-105 transition">
-                <div className="flex items-center gap-3 mb-2">
-                  <CheckCircle className="text-green-400" />
-                  <p className="text-green-300">Completed</p>
-                </div>
-                <p className="text-3xl font-bold text-green-400">{taskStats.completed}</p>
-              </div>
+            <div className="bg-yellow-900/20 p-5 rounded-xl border border-yellow-700/30">
+              <p className="text-yellow-300 text-base">Pending</p>
+              <p className="text-3xl font-bold text-yellow-400">{taskStats.pending}</p>
             </div>
 
-            {/* CATEGORY SECTION */}
-            <div className="bg-slate-900 p-7 rounded-2xl border border-slate-700 shadow-lg">
-              <div className="flex items-center gap-2 mb-5">
-                <Folder className="text-purple-400" />
-                <h2 className="text-2xl font-semibold">Tasks by Category</h2>
-              </div>
+            <div className="bg-blue-900/20 p-5 rounded-xl border border-blue-700/30">
+              <p className="text-blue-300 text-base">In Progress</p>
+              <p className="text-3xl font-bold text-blue-400">{taskStats.inProgress}</p>
+            </div>
+
+            <div className="bg-green-900/20 p-5 rounded-xl border border-green-700/30">
+              <p className="text-green-300 text-base">Completed</p>
+              <p className="text-3xl font-bold text-green-400">{taskStats.completed}</p>
+            </div>
+          </div>
+
+          {/* Category Breakdown */}
+          <div className="bg-slate-900 p-7 rounded-xl border border-slate-700">
+            <h2 className="text-2xl font-semibold text-slate-50 mb-4">Tasks by Category</h2>
 
               {Object.keys(taskStats.byCategory).length > 0 ? (
                 <div className="space-y-3">
