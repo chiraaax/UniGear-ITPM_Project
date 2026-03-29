@@ -92,15 +92,21 @@ const StatusDashboard = () => {
     try {
       setCompletingId(id);
 
-      await fetch(`${API_BASE}/tasks/${id}`, {
-        method: "PATCH",
+      const res = await fetch(`${API_BASE}/tasks/status/${id}`, {
+        method: "PUT",
         headers: authHeaders,
         body: JSON.stringify({ status: "Completed" }),
       });
 
+      if (!res.ok) {
+        throw new Error("Failed to complete task");
+      }
+
+      const updatedTask = await res.json();
+
       setMyTasks((prev) =>
         prev.map((t) =>
-          t._id === id ? { ...t, status: "Completed" } : t
+          t._id === id ? { ...t, status: updatedTask.status || "Completed" } : t
         )
       );
 
