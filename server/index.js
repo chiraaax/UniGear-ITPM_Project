@@ -19,6 +19,7 @@ const transactionRoutes = require('./routes/transactions');
 const userRoutes = require('./routes/users');
 const authRoutes = require('./routes/auth');
 const feedbackRoutes = require('./routes/feedback');
+const ratingsRoutes = require('./routes/ratings');
 const adminRoutes = require('./routes/admin');
 const uploadRoutes = require('./routes/upload');
 const chatbotRoutes = require('./routes/chatbot');
@@ -30,6 +31,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/ratings', ratingsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 
