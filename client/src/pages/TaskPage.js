@@ -193,8 +193,8 @@ const TaskPage = () => {
   <PlusCircle className="w-5 h-5" />
   Post Task
 </button>
-  </form>
-</section>
+          </form>
+        </section>
 
         {/* TASK LIST SECTION */}
         <section className="module-section">

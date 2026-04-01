@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000/api";
+const API_BASE = "http://localhost:5000/api";
 
 const StatusDashboard1 = () => {
   const { token, user } = useAuth();
@@ -118,6 +118,7 @@ const StatusDashboard1 = () => {
       });
 
       const data = await res.json();
+
       if (!res.ok) {
         alert(data.message || "Failed to complete task");
         return;
