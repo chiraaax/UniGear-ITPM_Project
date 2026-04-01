@@ -122,30 +122,27 @@ const TaskDashboard = () => {
         </button>
       </div>
 
-     <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-8 max-w-6xl mx-auto">
-  {tasks.length > 0 ? (
-    tasks.map((task) => (
-      <div
-        key={task._id}
-        className="bg-[#13263a] border border-gray-700 rounded-2xl p-6 shadow-xl hover:scale-[1.05] transition transform"
-      >
-        {/* TITLE */}
-        <h3 className="text-xl font-bold mb-4 bg-gray-700/50 px-3 py-2 rounded-full inline-block">
-          {task.description}
-        </h3>
+      {/* TASK GRID */}
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-6 max-w-6xl mx-auto">
+        {tasks.length > 0 ? (
+          tasks.map((task) => (
+            <div
+              key={task._id}
+              className="bg-[#13263a] border border-gray-700 rounded-2xl p-5 shadow-lg hover:scale-[1.03] transition transform"
+            >
+              <h3 className="text-lg font-semibold mb-3 bg-gray-700/50 px-2 py-1 rounded-full inline-block">
+                {task.description}
+              </h3>
 
-        {/* DETAILS */}
-        <div className="flex items-center gap-2 text-gray-300 text-base mb-2">
-          <DollarSign size={18} /> LKR {task.budget}
-        </div>
-
-        <div className="flex items-center gap-2 text-gray-300 text-base mb-2">
-          <MapPin size={18} /> {task.location}
-        </div>
-
-        <div className="flex items-center gap-2 text-gray-300 text-base mb-2">
-          <Folder size={18} /> {task.category}
-        </div>
+              <div className="flex items-center gap-2 text-gray-300 text-sm mb-1">
+                <DollarSign size={16} /> LKR {task.budget}
+              </div>
+              <div className="flex items-center gap-2 text-gray-300 text-sm mb-1">
+                <MapPin size={16} /> {task.location}
+              </div>
+              <div className="flex items-center gap-2 text-gray-300 text-sm mb-1">
+                <Folder size={16} /> {task.category}
+              </div>
 
         {/* STATUS */}
         <div className="mt-3">
