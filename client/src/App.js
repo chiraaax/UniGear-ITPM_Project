@@ -1,24 +1,34 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, NavLink, Navigate, useLocation } from 'react-router-dom';
-import './App.css';
-import 'react-calendar/dist/Calendar.css';
-import Dashboard from './pages/Dashboard';
-import RentalPage from './pages/RentalPage';
-import TaskPage from './pages/TaskPage';
-import AuthPage from './pages/AuthPage';
-import StatusDashboard from './pages/StatusDashboard';
-import FeedbackPage from './pages/FeedbackPage';
-import { useAuth } from './context/AuthContext';
-import MicroTaskDashboard from './pages/MicroTaskDashboard';
-import TaskStatusDashboard from './pages/TaskStatusDashboard';
-import EditTask from './pages/EditTask';
-import EditItem from './pages/EditItem';
-import TaskStatusTracking from './pages/TaskStatusTracking';
-import TaskDetail from './pages/TaskDetail';
-import AdminDashboard from './pages/AdminDashboard';
-import AdminLoginPage from './pages/AdminLoginPage';
-import FeedbackAdminDashboard from './pages/FeedbackAdminDashboard';
+import React from "react";
+import logo from "./assets/logo.png";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Link,
+  NavLink,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
+import "./App.css";
+import Dashboard from "./pages/Dashboard";
+import RentalPage from "./pages/RentalPage";
+import TaskPage from "./pages/TaskPage";
+import AuthPage from "./pages/AuthPage";
+import StatusDashboard from "./pages/StatusDashboard";
+import FeedbackPage from "./pages/FeedbackPage";
+import { useAuth } from "./context/AuthContext";
+import MicroTaskDashboard from "./pages/MicroTaskDashboard";
+import TaskStatusDashboard from "./pages/TaskStatusDashboard";
+import EditTask from "./pages/EditTask";
+import EditItem from "./pages/EditItem";
+import TaskStatusTracking from "./pages/TaskStatusTracking";
+import TaskDetail from "./pages/TaskDetail";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminLoginPage from "./pages/AdminLoginPage";
+//import FeedbackDisplayPage from "./pages/FeedbackDisplayPage";
+import FeedbackAdminDashboard from "./pages/FeedbackAdminDashboard";
 import TestimonialsPage from './pages/TestimonialsPage';
+
 
 const AdminProtectedRoute = ({ children }) => {
   const { user } = useAuth();
@@ -55,7 +65,13 @@ function App() {
                 <span
                   className={`text-sm font-semibold ${isLight ? "text-sky-700" : "text-sky-300"}`}
                 >
-                  UG
+                  <div className="h-12 w-12 rounded-full overflow-hidden shadow-sm flex items-center justify-center">
+                    <img
+                      src={logo}
+                      alt="UNIGEAR"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 </span>
               </div>
               <div className="flex flex-col">

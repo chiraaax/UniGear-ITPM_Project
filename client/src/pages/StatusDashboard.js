@@ -37,9 +37,7 @@ const StatusDashboard = () => {
       return;
     }
 
-    const headers = {
-      Authorization: `Bearer ${token}`,
-    };
+    const headers = { Authorization: `Bearer ${token}` };
 
     async function load() {
       try {
@@ -76,7 +74,7 @@ const StatusDashboard = () => {
     ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
     : {};
 
-  // RETURN ITEM FUNCTION
+    // RETURN ITEM FUNCTION
   const handleReturn = async (bookingId) => {
     try {
       const res = await fetch(
@@ -248,7 +246,7 @@ const StatusDashboard = () => {
       </header>
 
       {loading && (
-        <p className="text-sm text-slate-400">Loading your activity…</p>
+      <p className="text-sm text-slate-400">Loading your activity…</p>
       )}
 
       <div className="grid gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)]">

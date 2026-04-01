@@ -144,38 +144,38 @@ const TaskDashboard = () => {
                 <Folder size={16} /> {task.category}
               </div>
 
-              
+        {/* STATUS */}
+        <div className="mt-3">
+          <span
+            className={`inline-flex items-center gap-2 px-4 py-1.5 text-sm rounded-full text-white ${getStatusStyle(
+              task.status
+            )}`}
+          >
+            <CheckCircle size={16} /> {task.status}
+          </span>
+        </div>
 
-              <div className="mt-2">
-                <span
-                  className={`inline-flex items-center gap-1 px-3 py-1 text-xs rounded-full text-white ${getStatusStyle(
-                    task.status,
-                  )}`}
-                >
-                  <CheckCircle size={14} /> {task.status}
-                </span>
-              </div>
-
-              <button
-                onClick={() => navigate(`/task/${task._id}`)}
-                className="mt-4 w-full flex items-center justify-center gap-2 
+        {/* BUTTON */}
+        <button
+          onClick={() => navigate(`/task/${task._id}`)}
+         className="mt-4 w-full flex items-center justify-center gap-2 
              py-2 rounded-lg text-sm font-semibold text-white 
              border border-#80A3A5
              bg-gradient-to-r from-emerald-500 to-#80A3A5
              hover:from-#80A3A5 hover:to-#80A3A5
              transition transform hover:scale-105"
               >
-                <Eye size={16} />
-                View Task
-              </button>
-            </div>
-          ))
-        ) : (
-          <p className="text-gray-400 text-center col-span-full">
-            No tasks found.
-          </p>
-        )}
+          <Eye size={18} />
+          View Task
+        </button>
       </div>
+    ))
+  ) : (
+    <p className="text-gray-400 text-center col-span-full text-lg">
+      No tasks found.
+    </p>
+  )}
+</div>
     </div>
   );
 };

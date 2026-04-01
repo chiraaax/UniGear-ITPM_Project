@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { PlusCircle } from "lucide-react";
+
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000/api";
 
@@ -14,7 +16,7 @@ const TaskPage = () => {
     budget: "",
     deadline: "",
     location: "",
-    category: "", // ✅ added
+    category: "", // added
   });
 
   const fetchTasks = async () => {
@@ -100,72 +102,97 @@ const TaskPage = () => {
       </p>
 
       <div className="module-layout">
-        {/* FORM SECTION */}
-        <section className="module-section">
-          <h2>Post a New Task</h2>
-          <form className="module-form" onSubmit={handleSubmit}>
-            <label>
-              Description
-              <textarea
-                name="description"
-                value={form.description}
-                onChange={handleChange}
-                required
-              />
-            </label>
+      {/* FORM SECTION */}
+<section className="module-section mt-8">
+  <h2 className="text-2xl font-semibold text-#3a4c40 mb-4">
+    Post a New Task
+  </h2>
 
-            <label>
-              Category
-              <select
-                name="category"
-                value={form.category}
-                onChange={handleChange}
-                required
-              >
-                <option value="">Select Category</option>
-                <option value="Delivery">Delivery</option>
-                <option value="Cleaning">Cleaning</option>
-                <option value="Academic">Academic</option>
-                <option value="Technical">Technical</option>
-                <option value="Other">Other</option>
-              </select>
-            </label>
+  <form
+    onSubmit={handleSubmit}
+    className="bg-slate-900 border border-emerald-800 rounded-2xl p-6 space-y-4 shadow-lg"
+  >
+    {/* Description */}
+    <label className="block text-sm font-medium text-slate-300">
+      Description
+      <textarea
+        name="description"
+        value={form.description}
+        onChange={handleChange}
+        required
+        className="mt-1 w-full bg-slate-800 text-white rounded-lg border border-emerald-700 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/30 p-2 outline-none"
+      />
+    </label>
 
-            <label>
-              Budget (LKR)
-              <input
-                type="number"
-                min="0"
-                name="budget"
-                value={form.budget}
-                onChange={handleChange}
-                required
-              />
-            </label>
+    {/* Category */}
+    <label className="block text-sm font-medium text-slate-300">
+      Category
+      <select
+        name="category"
+        value={form.category}
+        onChange={handleChange}
+        required
+        className="mt-1 w-full bg-slate-800 text-white rounded-lg border border-emerald-700 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/30 p-2 outline-none"
+      >
+        <option value="">Select Category</option>
+        <option value="Delivery">Delivery</option>
+        <option value="Cleaning">Cleaning</option>
+        <option value="Academic">Academic</option>
+        <option value="Technical">Technical</option>
+        <option value="Other">Other</option>
+      </select>
+    </label>
 
-            <label>
-              Deadline
-              <input
-                type="datetime-local"
-                name="deadline"
-                value={form.deadline}
-                onChange={handleChange}
-                required
-              />
-            </label>
+    {/* Budget */}
+    <label className="block text-sm font-medium text-slate-300">
+      Budget (LKR)
+      <input
+        type="number"
+        min="0"
+        name="budget"
+        value={form.budget}
+        onChange={handleChange}
+        required
+        className="mt-1 w-full bg-slate-800 text-white rounded-lg border border-emerald-700 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/30 p-2 outline-none"
+      />
+    </label>
 
-            <label>
-              Location
-              <input
-                name="location"
-                value={form.location}
-                onChange={handleChange}
-                placeholder="e.g. Main Library, Lab 3B"
-                required
-              />
-            </label>
+    {/* Deadline */}
+    <label className="block text-sm font-medium text-slate-300">
+      Deadline
+      <input
+        type="datetime-local"
+        name="deadline"
+        value={form.deadline}
+        onChange={handleChange}
+        required
+        className="mt-1 w-full bg-slate-800 text-white rounded-lg border border-emerald-700 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/30 p-2 outline-none"
+      />
+    </label>
 
-            <button type="submit">Post Task</button>
+    {/* Location */}
+    <label className="block text-sm font-medium text-slate-300">
+      Location
+      <input
+        name="location"
+        value={form.location}
+        onChange={handleChange}
+        placeholder="e.g. Main Library, Lab 3B"
+        required
+        className="mt-1 w-full bg-slate-800 text-white rounded-lg border border-emerald-700 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/30 p-2 outline-none"
+      />
+    </label>
+
+    {/* Button */}
+   <button
+  type="submit"
+  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-emerald-700 
+             hover:from-emerald-700 hover:to-emerald-800 text-white font-semibold py-2 rounded-lg 
+             transition transform hover:scale-105 shadow-md shadow-emerald-500/20"
+>
+  <PlusCircle className="w-5 h-5" />
+  Post Task
+</button>
           </form>
         </section>
 
