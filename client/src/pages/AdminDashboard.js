@@ -1,37 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { 
-  Search, 
-  Filter, 
-  Download, 
-  Save, 
-  Trash2, 
-  ChevronLeft, 
-  ChevronRight,
-  CheckCircle,
-  XCircle,
-  Edit,
-  Eye,
-  Shield,
-  Users,
-  Package,
-  Clock,
-  AlertTriangle,
-  UserCheck,
-  UserX,
-  RefreshCw,
-  Activity,
-  TrendingUp,
-  Calendar,
-  User,
-  Settings,
-  LogIn,
-  LogOut,
-  ShoppingCart,
-  MessageSquare,
-  Star,
-  Flag,
-  Plus,
+  Search, Filter, Download, Save, Trash2, ChevronLeft, ChevronRight, 
+  CheckCircle, XCircle, Edit, Eye, Shield, Users, Package, Clock, 
+  AlertTriangle, UserCheck, UserX, RefreshCw, Activity, TrendingUp, 
+  Calendar, User, Settings, LogIn, LogOut, ShoppingCart, MessageSquare, 
+  Star, Flag, Plus, Undo2, Briefcase, LayoutGrid, List, ArrowUpDown,
+  X, Maximize2, Minimize2, ChevronDown, MoreVertical
 } from 'lucide-react';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
@@ -83,8 +58,6 @@ const ACTION_COLORS = {
 
 const AdminDashboard = () => {
   const { token, user } = useAuth();
-  const [rentals, setRentals] = useState([]);
-  const [tasks, setTasks] = useState([]);
   
   // State for all items
   const [allRentals, setAllRentals] = useState([]);
@@ -191,15 +164,9 @@ const AdminDashboard = () => {
     [token]
   );
 
-  // Calculate audit stats from logs (client-side fallback)
   const calculateAuditStats = (logs) => {
     if (!logs || logs.length === 0) {
-      return {
-        totalActions: 0,
-        uniqueUsers: 0,
-        actionsPerDay: 0,
-        mostActiveHour: 'N/A'
-      };
+      return { totalActions: 0, uniqueUsers: 0, actionsPerDay: 0, mostActiveHour: 'N/A' };
     }
     const uniqueUsers = new Set(logs.map(log => log.user?._id).filter(id => id));
     const actionsByHour = {};
@@ -207,7 +174,6 @@ const AdminDashboard = () => {
       const hour = new Date(log.createdAt).getHours();
       actionsByHour[hour] = (actionsByHour[hour] || 0) + 1;
     });
-    
     let mostActiveHour = 'N/A';
     let maxActions = 0;
     for (const [hour, count] of Object.entries(actionsByHour)) {
@@ -216,13 +182,7 @@ const AdminDashboard = () => {
     const dates = logs.map(log => new Date(log.createdAt).toDateString());
     const uniqueDates = new Set(dates);
     const actionsPerDay = uniqueDates.size > 0 ? (logs.length / uniqueDates.size).toFixed(1) : 0;
-    
-    return {
-      totalActions: logs.length,
-      uniqueUsers: uniqueUsers.size,
-      actionsPerDay: parseFloat(actionsPerDay),
-      mostActiveHour
-    };
+    return { totalActions: logs.length, uniqueUsers: uniqueUsers.size, actionsPerDay: parseFloat(actionsPerDay), mostActiveHour };
   };
 
   const loadAllData = useCallback(async () => {
@@ -261,7 +221,6 @@ const AdminDashboard = () => {
       setAuditStats(calculateAuditStats(logsData?.items || []));
       setAnalytics(analyticsData);
       setQueueStats(queueData);
-      
       setError('');
     } catch (err) {
       console.error('Error loading data:', err);
@@ -476,46 +435,6 @@ const AdminDashboard = () => {
       status: task.status || 'Pending',
     });
     setDrawerMode('editTask');
-  };
-
-  const openRejectRentalDrawer = (item) => {
-    setRejectDraft({
-      key: `rentals:${item._id}`,
-      type: 'rentals',
-      id: item._id,
-      reasonCode: 'other',
-      note: '',
-    });
-    setDrawerMode('rejectRental');
-  };
-
-  const openRejectTaskDrawer = (task) => {
-    setRejectDraft({
-      key: `tasks:${task._id}`,
-      type: 'tasks',
-      id: task._id,
-      reasonCode: 'other',
-      note: '',
-    });
-    setDrawerMode('rejectTask');
-  };
-
-  const confirmRejectFromDrawer = async () => {
-    if (!rejectDraft?.id || !rejectDraft?.reasonCode) return;
-    const type = rejectDraft.type;
-    try {
-      await moderateRequest(type, rejectDraft.id, 'rejected', {
-        moderationReasonCode: rejectDraft.reasonCode,
-        moderationNote: rejectDraft.note || '',
-      });
-      pushToast('success', 'Rejected', `Submission rejected successfully.`);
-      closeDrawer();
-      loadData();
-    } catch (err) {
-      const msg = err?.message || 'Reject failed.';
-      setError(msg);
-      pushToast('error', 'Reject failed', msg);
-    }
   };
 
   const submitRentalEdit = async (id) => {
