@@ -1119,7 +1119,7 @@ const AdminDashboard = () => {
                       <Users className="w-5 h-5 text-green-400" />
                       <span className="text-2xl font-bold text-white">{auditStats.uniqueUsers || 0}</span>
                     </div>
-                    <p className="text-xs text-gray-400">Unique Users</p>
+                    <p className="text-xs text-gray-400">Unverified Users</p>
                   </div>
                   <div className="bg-gradient-to-br from-gray-800/40 to-gray-900/40 backdrop-blur-xl rounded-2xl p-5 border border-gray-700/50">
                     <div className="flex items-center justify-between mb-3">
