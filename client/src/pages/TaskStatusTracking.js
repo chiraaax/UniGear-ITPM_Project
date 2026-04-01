@@ -1,6 +1,25 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { BarChart3, ClipboardList } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { BarChart3, ClipboardList } from "lucide-react";
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+} from "chart.js";
+import { Pie, Bar } from "react-chartjs-2";
+
+ChartJS.register(
+  ArcElement,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  BarElement
+);
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000/api";
 
@@ -15,7 +34,7 @@ const TaskStatusTracking = () => {
   });
   const [loading, setLoading] = useState(true);
 
-  const fetchTaskStats = React.useCallback(async () => {
+  const fetchTaskStats = useCallback(async () => {
     try {
       setLoading(true);
       const headers = { Authorization: `Bearer ${token}` };
@@ -25,7 +44,6 @@ const TaskStatusTracking = () => {
 
       const tasks = await res.json();
 
-      // Calculate statistics
       const stats = {
         total: tasks.length,
         pending: 0,
@@ -35,14 +53,12 @@ const TaskStatusTracking = () => {
       };
 
       tasks.forEach((task) => {
-        // Count by status
-        if (task.status === 'Pending') stats.pending++;
-        else if (task.status === 'In Progress') stats.inProgress++;
-        else if (task.status === 'Completed') stats.completed++;
+        if (task.status === "Pending") stats.pending += 1;
+        else if (task.status === "In Progress") stats.inProgress += 1;
+        else if (task.status === "Completed") stats.completed += 1;
 
-        // Count by category
-        const cat = task.category || 'Uncategorized';
-        stats.byCategory[cat] = (stats.byCategory[cat] || 0) + 1;
+        const category = task.category || "Uncategorized";
+        stats.byCategory[category] = (stats.byCategory[category] || 0) + 1;
       });
 
       setTaskStats(stats);
@@ -54,8 +70,37 @@ const TaskStatusTracking = () => {
   }, [token]);
 
   useEffect(() => {
-    if (token) fetchTaskStats();
+    if (token) {
+      fetchTaskStats();
+    }
   }, [token, fetchTaskStats]);
+
+  const pieData = useMemo(
+    () => ({
+      labels: ["Pending", "In Progress", "Completed"],
+      datasets: [
+        {
+          data: [taskStats.pending, taskStats.inProgress, taskStats.completed],
+          backgroundColor: ["#facc15", "#3b82f6", "#22c55e"],
+        },
+      ],
+    }),
+    [taskStats.pending, taskStats.inProgress, taskStats.completed]
+  );
+
+  const barData = useMemo(
+    () => ({
+      labels: ["Pending", "In Progress", "Completed"],
+      datasets: [
+        {
+          label: "Tasks",
+          data: [taskStats.pending, taskStats.inProgress, taskStats.completed],
+          backgroundColor: ["#facc15", "#3b82f6", "#22c55e"],
+        },
+      ],
+    }),
+    [taskStats.pending, taskStats.inProgress, taskStats.completed]
+  );
 
   if (!token) {
     return (
@@ -68,8 +113,6 @@ const TaskStatusTracking = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0b1a2a] to-[#0f2a44] text-white px-4 py-10">
       <div className="max-w-7xl mx-auto">
-
-        {/* HEADER */}
         <div className="flex items-center gap-3 mb-8">
           <BarChart3 className="text-blue-400" size={28} />
           <h1 className="text-4xl font-bold">Task Analytics Dashboard</h1>
@@ -79,11 +122,7 @@ const TaskStatusTracking = () => {
           <p className="text-slate-400">Loading...</p>
         ) : (
           <div className="space-y-8">
-
-            {/* STATS CARDS */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-
-              {/* TOTAL */}
               <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700 shadow-lg hover:scale-105 transition">
                 <div className="flex items-center gap-3 mb-2">
                   <ClipboardList className="text-white" />
@@ -92,25 +131,26 @@ const TaskStatusTracking = () => {
                 <p className="text-3xl font-bold">{taskStats.total}</p>
               </div>
 
-            <div className="bg-yellow-900/20 p-5 rounded-xl border border-yellow-700/30">
-              <p className="text-yellow-300 text-base">Pending</p>
-              <p className="text-3xl font-bold text-yellow-400">{taskStats.pending}</p>
+              <div className="bg-yellow-900/20 p-5 rounded-xl border border-yellow-700/30">
+                <p className="text-yellow-300 text-base">Pending</p>
+                <p className="text-3xl font-bold text-yellow-400">{taskStats.pending}</p>
+              </div>
+
+              <div className="bg-blue-900/20 p-5 rounded-xl border border-blue-700/30">
+                <p className="text-blue-300 text-base">In Progress</p>
+                <p className="text-3xl font-bold text-blue-400">{taskStats.inProgress}</p>
+              </div>
+
+              <div className="bg-green-900/20 p-5 rounded-xl border border-green-700/30">
+                <p className="text-green-300 text-base">Completed</p>
+                <p className="text-3xl font-bold text-green-400">{taskStats.completed}</p>
+              </div>
             </div>
 
-            <div className="bg-blue-900/20 p-5 rounded-xl border border-blue-700/30">
-              <p className="text-blue-300 text-base">In Progress</p>
-              <p className="text-3xl font-bold text-blue-400">{taskStats.inProgress}</p>
-            </div>
-
-            <div className="bg-green-900/20 p-5 rounded-xl border border-green-700/30">
-              <p className="text-green-300 text-base">Completed</p>
-              <p className="text-3xl font-bold text-green-400">{taskStats.completed}</p>
-            </div>
-          </div>
-
-          {/* Category Breakdown */}
-          <div className="bg-slate-900 p-7 rounded-xl border border-slate-700">
-            <h2 className="text-2xl font-semibold text-slate-50 mb-4">Tasks by Category</h2>
+            <div className="bg-slate-900 p-7 rounded-xl border border-slate-700">
+              <h2 className="text-2xl font-semibold text-slate-50 mb-4">
+                Tasks by Category
+              </h2>
 
               {Object.keys(taskStats.byCategory).length > 0 ? (
                 <div className="space-y-3">
@@ -131,7 +171,6 @@ const TaskStatusTracking = () => {
               )}
             </div>
 
-            {/* STATUS PROGRESS */}
             <div className="bg-slate-900 p-7 rounded-2xl border border-slate-700 shadow-lg">
               <div className="flex items-center gap-2 mb-5">
                 <BarChart3 className="text-indigo-400" />
@@ -140,8 +179,16 @@ const TaskStatusTracking = () => {
 
               {[
                 { label: "Pending", value: taskStats.pending, color: "bg-yellow-500" },
-                { label: "In Progress", value: taskStats.inProgress, color: "bg-blue-500" },
-                { label: "Completed", value: taskStats.completed, color: "bg-green-500" },
+                {
+                  label: "In Progress",
+                  value: taskStats.inProgress,
+                  color: "bg-blue-500",
+                },
+                {
+                  label: "Completed",
+                  value: taskStats.completed,
+                  color: "bg-green-500",
+                },
               ].map((item) => {
                 const percent =
                   taskStats.total > 0
@@ -164,8 +211,19 @@ const TaskStatusTracking = () => {
                   </div>
                 );
               })}
-            </div>
 
+              <div className="grid md:grid-cols-2 gap-8 mt-10">
+                <div className="bg-slate-800 p-6 rounded-xl shadow">
+                  <h2 className="text-xl mb-4">Task Distribution (Pie)</h2>
+                  <Pie data={pieData} />
+                </div>
+
+                <div className="bg-slate-800 p-6 rounded-xl shadow">
+                  <h2 className="text-xl mb-4">Task Status (Bar)</h2>
+                  <Bar data={barData} />
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

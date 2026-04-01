@@ -173,6 +173,7 @@ function App() {
                   My activity
                 </NavLink>
               )}
+
               {user && (
                 <NavLink
                   to="/task-tracking"
@@ -191,6 +192,8 @@ function App() {
                   Task Status
                 </NavLink>
               )}
+
+
               {user?.role === "admin" && (
                 <>
                   <NavLink
@@ -225,6 +228,28 @@ function App() {
                   >
                     Feedback Analytics
                   </NavLink>
+
+
+
+                  <NavLink
+                    to="/admin/status-tasks"
+                    className={({ isActive }) =>
+                      `rounded-full px-3 py-1 transition ${
+                        isActive
+                          ? isLight
+                            ? "bg-slate-200 text-slate-900"
+                            : "bg-slate-800 text-slate-50"
+                          : isLight
+                            ? "hover:bg-slate-200/80"
+                            : "hover:bg-slate-800/60"
+                      }`
+                    }
+                  >
+                    Task Analytics
+                  </NavLink>
+
+
+
                 </>
               )}
             </nav>
@@ -275,7 +300,7 @@ function App() {
             <Route path="/tasks" element={<TaskPage />} />
             <Route path="/me" element={<StatusDashboard />} />
             <Route path="/micro-tasks" element={<MicroTaskDashboard />} />
-            <Route path="/status-tasks" element={<TaskStatusDashboard />} />
+            <Route path="/admin/status-tasks" element={<TaskStatusDashboard />} />
             <Route path="/task-tracking" element={<TaskStatusTracking />} />
             <Route path="/task/:id" element={<TaskDetail />} />
             <Route path="/edit-task/:id" element={<EditTask />} />
