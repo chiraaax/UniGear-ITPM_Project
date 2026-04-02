@@ -77,11 +77,11 @@ const TaskStatusTracking = () => {
 
   const pieData = useMemo(
     () => ({
-      labels: ["Pending", "In Progress", "Completed"],
+      labels: ["Academic", "Technical", "Other", "Cleaning", "Delivery"],
       datasets: [
         {
           data: [taskStats.pending, taskStats.inProgress, taskStats.completed],
-          backgroundColor: ["#facc15", "#3b82f6", "#22c55e"],
+          backgroundColor: ["#7999dd", "#de8abb","#f0b960", "#a1f3b4", "#ea5b7f"],
         },
       ],
     }),
@@ -95,7 +95,7 @@ const TaskStatusTracking = () => {
         {
           label: "Tasks",
           data: [taskStats.pending, taskStats.inProgress, taskStats.completed],
-          backgroundColor: ["#facc15", "#3b82f6", "#22c55e"],
+          backgroundColor: ["#f8de73", "#81aaed", "#84e0a6"],
         },
       ],
     }),
@@ -212,9 +212,9 @@ const TaskStatusTracking = () => {
                 );
               })}
 
-              <div className="grid md:grid-cols-2 gap-8 mt-10">
-                <div className="bg-slate-800 p-6 rounded-xl shadow">
-                  <h2 className="text-xl mb-4">Task Distribution (Pie)</h2>
+              <div className="grid md:grid-cols-2 gap-8 mt-10 ">
+                <div className="bg-slate-800 p-6 rounded-xl shadow size-[550px]">
+                  <h2 className="text-xl mb-4 ">Category Distribution (Pie) </h2>
                   <Pie data={pieData} />
                 </div>
 

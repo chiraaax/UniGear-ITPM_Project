@@ -27,7 +27,7 @@ const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000/api";
 const TaskStatusDashboard = () => {
   const { token } = useAuth();
 
-  // ✅ ONLY ONE STATE (FIXED)
+  //  ONLY ONE STATE (FIXED)
   const [taskStats, setTaskStats] = useState({
     total: 0,
     pending: 0,
@@ -38,7 +38,7 @@ const TaskStatusDashboard = () => {
 
   const [loading, setLoading] = useState(true);
 
-  // ✅ FETCH TASK STATS (FIXED)
+  // FETCH TASK STATS (FIXED)
   const fetchTaskStats = useCallback(async () => {
     try {
       setLoading(true);
@@ -75,18 +75,18 @@ const TaskStatusDashboard = () => {
     fetchTaskStats();
   }, [fetchTaskStats]);
 
-  // ✅ PIE DATA
+  // PIE DATA
   const pieData = useMemo(() => ({
-    labels: ["Pending", "In Progress", "Completed"],
+    labels: ["Academic", "Technical", "Other", "Cleaning", "Delivery"],
     datasets: [
       {
         data: [taskStats.pending, taskStats.inProgress, taskStats.completed],
-        backgroundColor: ["#facc15", "#3b82f6", "#22c55e"],
+        backgroundColor: ["#7999dd", "#de8abb","#f0b960", "#a1f3b4", "#ea5b7f"],
       },
     ],
   }), [taskStats]);
 
-  // ✅ BAR DATA
+  // BAR DATA
   const barData = useMemo(() => ({
     labels: ["Pending", "In Progress", "Completed"],
     datasets: [
@@ -153,8 +153,8 @@ const TaskStatusDashboard = () => {
             {/* CHARTS */}
             <div className="grid md:grid-cols-2 gap-6">
 
-              <div className="bg-slate-800 p-6 rounded-xl">
-                <h2>Pie Chart</h2>
+              <div className="bg-slate-800 p-6 rounded-xl size-[500px]">
+                <h2>Category Distribution</h2>
                 <Pie data={pieData} />
               </div>
 
