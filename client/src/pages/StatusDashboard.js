@@ -21,6 +21,7 @@ const StatusDashboard = () => {
   const [profile, setProfile] = useState(null);
   const [myItems, setMyItems] = useState([]);
   const [myTasks, setMyTasks] = useState([]);
+  const [transactions, setTransactions] = useState([]);
   const [myBookings, setMyBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [completingId, setCompletingId] = useState(null);
@@ -41,18 +42,20 @@ const StatusDashboard = () => {
 
     async function load() {
       try {
-        const [meRes, itemsRes, tasksRes, bookingRes] =
+        const [meRes, itemsRes, tasksRes, txRes, bookingRes] =
           await Promise.all([
             fetch(`${API_BASE}/users/me`, { headers }),
             fetch(`${API_BASE}/rentals/my-items`, { headers }),
             fetch(`${API_BASE}/tasks/my-tasks`, { headers }),
+            fetch(`${API_BASE}/transactions`, { headers }),
             fetch(`${API_BASE}/rentals/my-bookings`, { headers }),
           ]);
 
-        const [me, items, tasks, bookings] = await Promise.all([
+        const [me, items, tasks, txs, bookings] = await Promise.all([
           meRes.json(),
           itemsRes.json(),
           tasksRes.json(),
+          txRes.json(),
           bookingRes.json(),
         ]);
 
@@ -103,6 +106,64 @@ const StatusDashboard = () => {
       setMyBookings(Array.isArray(bookings) ? bookings : []);
     } catch (e) {
       console.error("Error returning item:", e);
+    }
+  };
+
+  const handleConfirm = async (txId) => {
+    try {
+      await fetch(`${API_BASE}/transactions/${txId}/confirm`, {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({}),
+      });
+      // reload just transactions
+      const res = await fetch(`${API_BASE}/transactions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setTransactions(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error("Error confirming transaction:", e);
+    }
+  };
+
+  const handleMarkCompleted = async (tx) => {
+    try {
+      await fetch(`${API_BASE}/transactions/${tx._id}/status`, {
+        method: "PATCH",
+        headers: authHeaders,
+        body: JSON.stringify({ status: "Completed" }),
+      });
+      const res = await fetch(`${API_BASE}/transactions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setTransactions(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error("Error marking completed:", e);
+    }
+  };
+
+  const handleRate = async (txId, rating) => {
+    try {
+      await fetch(`${API_BASE}/transactions/${txId}/rate`, {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({ rating }),
+      });
+      const [meRes, txRes] = await Promise.all([
+        fetch(`${API_BASE}/users/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${API_BASE}/transactions`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+      const [me, txs] = await Promise.all([meRes.json(), txRes.json()]);
+      setProfile(me);
+      setTransactions(Array.isArray(txs) ? txs : []);
+    } catch (e) {
+      console.error("Error rating:", e);
     }
   };
 
@@ -464,6 +525,7 @@ const StatusDashboard = () => {
             )}
           </div>
         </section>
+
       </div>
 
       <style>{`
