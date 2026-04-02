@@ -19,6 +19,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminLoginPage from './pages/AdminLoginPage';
 import FeedbackAdminDashboard from './pages/FeedbackAdminDashboard';
 import TestimonialsPage from './pages/TestimonialsPage';
+import ProfilePage from './pages/ProfilePage';
 
 const AdminProtectedRoute = ({ children }) => {
   const { user } = useAuth();
@@ -232,6 +233,16 @@ function App() {
                       · Trust {user.trustScore?.toFixed(1) ?? "—"}
                     </span>
                   </span>
+                  <Link
+                    to="/profile"
+                    className={`rounded-full border px-3 py-1 flex items-center gap-1 ${isLight ? "border-slate-300 text-slate-700 hover:bg-slate-100" : "border-slate-600/70 text-slate-200 hover:bg-slate-800/70"}`}
+                    title="My Profile"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span className="hidden md:inline">Profile</span>
+                  </Link>
                   <button
                     type="button"
                     onClick={logout}
@@ -253,6 +264,7 @@ function App() {
         </header>
         <main className="flex-1">
           <Routes>
+            <Route path="/profile" element={<ProfilePage />} />
             <Route path="/" element={<Dashboard />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/rentals" element={<RentalPage />} />

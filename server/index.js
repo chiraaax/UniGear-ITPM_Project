@@ -2,10 +2,14 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const path = require('path');
 
 dotenv.config();
 
 const app = express();
+
+// Set up static files for uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Core middleware
 app.use(cors());
@@ -34,6 +38,7 @@ app.use('/api/feedback', feedbackRoutes);
 app.use('/api/ratings', ratingsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/chatbot', chatbotRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Simple health check
 app.get('/api/health', (req, res) => {
