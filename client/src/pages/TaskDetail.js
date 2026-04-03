@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -16,7 +16,7 @@ const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
 const TaskDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token, user, theme } = useAuth();
+  const { token, theme } = useAuth();
   const isLight = theme === 'light';
 
   const [task, setTask] = useState(null);
@@ -24,7 +24,7 @@ const TaskDetail = () => {
   const [accepting, setAccepting] = useState(false);
   const [error, setError] = useState('');
 
-  const fetchTask = async () => {
+  const fetchTask = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch(`${API_BASE}/tasks/${id}`);
@@ -37,11 +37,11 @@ const TaskDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchTask();
-  }, [id]);
+  }, [fetchTask]);
 
   const handleAcceptTask = async () => {
     if (!token) {

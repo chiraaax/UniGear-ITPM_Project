@@ -1,7 +1,7 @@
 import React from "react";
 import logo from "./assets/logo.png";
 import {
-  BrowserRouter as Router,
+  BrowserRouter,
   Routes,
   Route,
   Link,
@@ -53,10 +53,9 @@ function App() {
   const isLight = theme === "light";
 
   return (
-    <Router>
-      <div
-        className={`min-h-screen flex flex-col ${isLight ? "bg-slate-100 text-slate-900" : "bg-slate-950 bg-gradient-to-br from-slate-950 via-slate-900 to-sky-900/60"}`}
-      >
+    <div
+      className={`min-h-screen flex flex-col ${isLight ? "bg-slate-100 text-slate-900" : "bg-slate-950 bg-gradient-to-br from-slate-950 via-slate-900 to-sky-900/60"}`}
+    >
         <header
           className={`sticky top-0 z-20 border-b backdrop-blur ${isLight ? "border-slate-200 bg-white/75" : "border-slate-800/70 bg-slate-950/70"}`}
         >
@@ -341,7 +340,6 @@ function App() {
           UniGear · Built for campus communities
         </footer>
       </div>
-    </Router>
   );
 }
 

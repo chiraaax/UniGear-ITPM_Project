@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import ItemDetailModal from "../components/ItemDetailModal";
@@ -67,7 +67,7 @@ const RentalPage = () => {
     return today;
   };
 
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/rentals/items`);
       const data = await res.json();
@@ -80,11 +80,11 @@ const RentalPage = () => {
     } catch (err) {
       console.error(err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchItems();
-  }, []);
+  }, [fetchItems]);
 
   // Filter and search items
   useEffect(() => {

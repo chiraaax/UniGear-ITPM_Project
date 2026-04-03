@@ -6,7 +6,7 @@ import {
   AlertTriangle, UserCheck, UserX, RefreshCw, Activity, TrendingUp, 
   Calendar, User, Settings, LogIn, LogOut, ShoppingCart, MessageSquare, 
   Star, Flag, Plus, Undo2, Briefcase, LayoutGrid, List, ArrowUpDown,
-  X, Maximize2, Minimize2, ChevronDown, MoreVertical
+  X, ChevronDown
 } from 'lucide-react';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
@@ -77,8 +77,6 @@ const AdminDashboard = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [editingRental, setEditingRental] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
-  const [selectedRentalIds, setSelectedRentalIds] = useState([]);
-  const [selectedTaskIds, setSelectedTaskIds] = useState([]);
   const [rejectDraft, setRejectDraft] = useState(null);
   
   // Filters for All Rentals/Tasks views
@@ -88,10 +86,10 @@ const AdminDashboard = () => {
   const [taskStatusFilter, setTaskStatusFilter] = useState('all');
   const [rentalCategoryFilter, setRentalCategoryFilter] = useState('all');
   const [taskCategoryFilter, setTaskCategoryFilter] = useState('all');
-  const [rentalSortBy, setRentalSortBy] = useState('createdAt');
-  const [taskSortBy, setTaskSortBy] = useState('createdAt');
-  const [rentalSortOrder, setRentalSortOrder] = useState('desc');
-  const [taskSortOrder, setTaskSortOrder] = useState('desc');
+  const [rentalSortBy] = useState('createdAt');
+  const [taskSortBy] = useState('createdAt');
+  const [rentalSortOrder] = useState('desc');
+  const [taskSortOrder] = useState('desc');
   const [rentalViewMode, setRentalViewMode] = useState('grid');
   const [taskViewMode, setTaskViewMode] = useState('grid');
   

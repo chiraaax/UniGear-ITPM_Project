@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { BarChart3, ClipboardList } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 import {
   Chart as ChartJS,
   Tooltip,
@@ -183,7 +183,7 @@ const TaskStatusTracking = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700 shadow-lg hover:scale-105 transition">
                 <div className="flex items-center gap-3 mb-2">
-                  <ClipboardList className="text-white" />
+                  <BarChart3 className="text-white" />
                   <p className="text-slate-400">Total Tasks</p>
                 </div>
                 <p className="text-3xl font-bold">{taskStats.total}</p>
@@ -237,11 +237,19 @@ const TaskStatusTracking = () => {
               )}
             </div>
 
-            <div className="bg-slate-900 p-7 rounded-2xl border border-slate-700 shadow-lg">
+           <div className="bg-slate-900 p-7 rounded-2xl border border-slate-700 shadow-lg">
               <div className="flex items-center gap-2 mb-5">
                 <BarChart3 className="text-indigo-400" />
                 <h2 className="text-2xl font-semibold">Status Distribution</h2>
               </div>
+
+              {taskStats.total > 0 ? (
+                <div className="h-80 mb-10">
+                  <Bar data={barData} options={barOptions} />
+                </div>
+              ) : (
+                <p className="text-slate-400 mb-10">No status data available.</p>
+              )}
 
               {[
                 {
@@ -281,21 +289,6 @@ const TaskStatusTracking = () => {
                   </div>
                  );
               })}
-
-
-              {/* <div className="bg-slate-800 p-6 rounded-xl shadow">
-                {" "}
-                <h2 className="text-xl mb-4">
-                  Tasks Trend Over Time (Bar)
-                </h2>{" "}
-                {taskStats.total > 0 ? (
-                  <div className="h-80">
-                    <Bar data={barData} options={barOptions} />
-                  </div>
-                ) : (
-                  <p className="text-slate-400">No tasks available.</p>
-                )}{" "}
-              </div>*/}
             </div> 
 
 
