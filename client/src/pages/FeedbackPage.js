@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import '../styles/FeedbackPage.css';
 
+const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
+
 const FeedbackPage = () => {
   const [form, setForm] = useState({
     name: '',
@@ -22,7 +24,7 @@ const FeedbackPage = () => {
 
   const fetchFeedbacks = useCallback(async () => {
     try {
-      const response = await fetch('/api/feedback', {
+      const response = await fetch(`${API_BASE}/feedback`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -105,7 +107,7 @@ const FeedbackPage = () => {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/feedback', {
+      const response = await fetch(`${API_BASE}/feedback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -144,7 +146,7 @@ const FeedbackPage = () => {
 
   const handleUpdate = async () => {
     try {
-      const response = await fetch(`/api/feedback/${editingId}`, {
+      const response = await fetch(`${API_BASE}/feedback/${editingId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -166,7 +168,7 @@ const FeedbackPage = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this feedback?')) return;
     try {
-      const response = await fetch(`/api/feedback/${id}`, {
+      const response = await fetch(`${API_BASE}/feedback/${id}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,

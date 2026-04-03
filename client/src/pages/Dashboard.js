@@ -1,4 +1,4 @@
-import { Package, ListChecks, ArrowRight, ShieldCheck, Users } from "lucide-react";
+import { Package, ListChecks, ArrowRight, ShieldCheck, Users, MessageCircle } from "lucide-react";
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Chatbot from '../components/Chatbot';
@@ -148,10 +148,11 @@ const Dashboard = () => {
 
       </div>
 
-      {/* CHATBOT */}
+       {/* CHATBOT */}
       {!isChatOpen && (
         <div className="chatbot-icon" onClick={() => setIsChatOpen(true)}>
-          🤖
+          <MessageCircle size={28} />
+          <div className="cb-icon-pulse"></div>
         </div>
       )}
       {isChatOpen && <Chatbot closeChat={() => setIsChatOpen(false)} />}

@@ -1,47 +1,95 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Send, X, Sparkles } from 'lucide-react';
 import '../styles/Chatbot.css';
 
-const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
+const SUGGESTIONS = [
+  "How does UniGear work?",
+  "How to rent an item?",
+  "How to list a micro-task?",
+  "Is the platform secure?",
+  "What's the trust score?"
+];
+
+const FormattedText = ({ text }) => {
+  if (!text) return null;
+  
+  const lines = text.split('\n');
+  return lines.map((line, i) => {
+    let parts = line.split(/(\*\*.*?\*\*)/g).map((part, j) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={j}>{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+
+    if (line.trim().startsWith('* ')) {
+      return <li key={i} className="cb-list-item">{parts.slice(1)}</li>;
+    }
+
+    return <p key={i}>{parts}</p>;
+  });
+};
 
 const Chatbot = ({ closeChat }) => {
   const [messages, setMessages] = useState([
-    { from: 'bot', text: "Hello! I'm UniGear's assistant. How can I help you today?" },
+    { 
+      from: 'bot', 
+      text: "Hello! I'm **UniGear Assistant**. I can help you rent equipment or earn between classes. How can I help you today?",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    },
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(true);
+  const messagesEndRef = useRef(null);
 
-  const sendMessage = async (e) => {
-    e.preventDefault();
-    if (!input.trim()) return;
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
-    const userMessage = { from: 'user', text: input };
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isLoading]);
+
+  const handleSendMessage = async (text) => {
+    if (!text.trim()) return;
+
+    const userMessage = { 
+      from: 'user', 
+      text: text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
+    setShowSuggestions(false);
 
     try {
-      const response = await fetch(`${API_BASE}/chatbot`, {
+      const response = await fetch(`http://localhost:5002/api/chatbot`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: input }),
+        body: JSON.stringify({ message: text }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to get response from the chatbot.');
-      }
+      if (!response.ok) throw new Error('Chatbot error');
 
       const data = await response.json();
-      const botMessage = { from: 'bot', text: data.reply };
+      const botMessage = { 
+        from: 'bot', 
+        text: data.reply,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
       console.error('Chatbot error:', error);
-      const errorMessage = {
-        from: 'bot',
-        text: "Sorry, I'm having trouble connecting. Please try again later.",
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, { 
+        from: 'bot', 
+        text: "I'm having trouble connecting. Let's try again in a moment.",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }]);
     } finally {
       setIsLoading(false);
     }
@@ -50,38 +98,74 @@ const Chatbot = ({ closeChat }) => {
   return (
     <div className="chatbot-window">
       <div className="chatbot-header">
-        <h3>UniGear Assistant</h3>
-        <button onClick={closeChat} className="chatbot-close-btn">
-          &times;
+        <div className="cb-header-left">
+          <div className="cb-status-dot"></div>
+          <h3>UniGear Assistant</h3>
+        </div>
+        <button onClick={closeChat} className="chatbot-close-btn" aria-label="Close">
+          <X size={18} />
         </button>
       </div>
-      <div className="chatbot-messages">
-        {messages.map((msg, index) => (
-          <div key={index} className={`chat-message ${msg.from}`}>
-            <p>{msg.text}</p>
+
+      <div className="cb-messages-area">
+        {messages.map((msg, i) => (
+          <div key={i} className={`cb-message ${msg.from}`}>
+            <div className="cb-message-content">
+              <FormattedText text={msg.text} />
+            </div>
+            <span className="cb-timestamp">{msg.timestamp}</span>
           </div>
         ))}
         {isLoading && (
-          <div className="chat-message bot">
-            <div className="typing-indicator">
-              <span></span>
-              <span></span>
-              <span></span>
+          <div className="cb-message bot">
+            <div className="cb-typing-indicator">
+              <div className="cb-dot"></div>
+              <div className="cb-dot"></div>
+              <div className="cb-dot"></div>
             </div>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
-      <form className="chatbot-input-form" onSubmit={sendMessage}>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask something..."
-          aria-label="Chat input"
-          disabled={isLoading}
-        />
-        <button type="submit" disabled={isLoading}>
-          Send
+
+      {showSuggestions && (
+        <div className="cb-suggestions-section">
+          <div className="cb-suggestions-title">
+            <Sparkles size={14} />
+            <span>Suggested Topics</span>
+          </div>
+          <div className="cb-suggestions-grid">
+            {SUGGESTIONS.map((suggestion, i) => (
+              <button
+                key={i}
+                className="cb-suggestion-chip"
+                onClick={() => handleSendMessage(suggestion)}
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <form
+        className="cb-input-area"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSendMessage(input);
+        }}
+      >
+        <div className="cb-input-wrapper">
+          <input
+            type="text"
+            className="cb-input-field"
+            placeholder="How can I help you?"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+          />
+        </div>
+        <button type="submit" className="cb-send-btn" disabled={isLoading}>
+          <Send size={18} />
         </button>
       </form>
     </div>

@@ -1,6 +1,8 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import ItemDetailModal from "../components/ItemDetailModal";
+import RatingsSummary from "../components/RatingsSummary";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 
@@ -37,6 +39,10 @@ const RentalPage = () => {
   const [availability, setAvailability] = useState({});
   const [selectedCalendarItem, setSelectedCalendarItem] = useState(null);
 
+  // ITEM DETAIL MODAL STATE
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+
   // IMAGE UPLOAD STATES
   const [images, setImages] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
@@ -61,7 +67,7 @@ const RentalPage = () => {
     return today;
   };
 
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/rentals/items`);
       const data = await res.json();
@@ -74,11 +80,11 @@ const RentalPage = () => {
     } catch (err) {
       console.error(err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchItems();
-  }, []);
+  }, [fetchItems]);
 
   // Filter and search items
   useEffect(() => {
@@ -269,6 +275,18 @@ const RentalPage = () => {
     setImages([]);
     setPreviewUrls([]);
     setShowModal(true);
+  };
+
+  // HANDLE VIEW ITEM DETAILS
+  const handleViewDetails = (item) => {
+    setSelectedItem(item);
+    setShowDetailModal(true);
+  };
+
+  // HANDLE CLOSE DETAIL MODAL
+  const handleCloseDetailModal = () => {
+    setSelectedItem(null);
+    setShowDetailModal(false);
   };
 
   // DELETE HANDLER
@@ -640,6 +658,19 @@ const RentalPage = () => {
                 </div>
               )}
 
+              {/* Ratings Summary */}
+              <div className="ratings-summary-section">
+                <RatingsSummary itemId={item._id} />
+              </div>
+
+              {/* View Details Button */}
+              <button
+                onClick={() => handleViewDetails(item)}
+                className="view-details-button"
+              >
+                ⭐ Rates and Feedback
+              </button>
+
               {/* Calendar Toggle */}
               <div className="calendar-section">
                 <button
@@ -932,6 +963,13 @@ const RentalPage = () => {
           </div>
         </div>
       )}
+
+      {/* Item Detail Modal with Ratings */}
+      <ItemDetailModal
+        item={selectedItem}
+        isOpen={showDetailModal}
+        onClose={handleCloseDetailModal}
+      />
 
       <style>{`
         * {
@@ -1263,6 +1301,32 @@ const RentalPage = () => {
           gap: 0.25rem;
           font-size: 0.7rem;
           color: #fbbf24;
+        }
+
+        .ratings-summary-section {
+          margin-bottom: 0.75rem;
+          padding: 0.5rem 0;
+        }
+
+        .view-details-button {
+          width: 100%;
+          padding: 0.6rem;
+          margin-bottom: 0.75rem;
+          border-radius: 0.75rem;
+          border: 1px solid rgba(96, 165, 250, 0.4);
+          background: rgba(59, 130, 246, 0.2);
+          color: #93c5fd;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          font-size: 0.9rem;
+        }
+
+        .view-details-button:hover {
+          background: rgba(59, 130, 246, 0.3);
+          border-color: rgba(96, 165, 250, 0.6);
+          color: #60a5fa;
+          transform: translateY(-1px);
         }
 
         .calendar-section {

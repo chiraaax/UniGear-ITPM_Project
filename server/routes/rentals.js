@@ -1,5 +1,6 @@
 const express = require("express");
 const Item = require("../models/Item");
+const User = require("../models/User");
 const Booking = require("../models/Booking");
 const Transaction = require("../models/Transaction");
 const auth = require("../middleware/auth");
@@ -33,6 +34,9 @@ router.post(
         dailyRate,
         blockedDates,
       });
+
+      // Award 10 loyalty points for listing an item
+      await User.findByIdAndUpdate(req.user._id, { $inc: { loyaltyPoints: 10 } });
 
       res.status(201).json(item);
     } catch (err) {
@@ -221,6 +225,9 @@ router.post("/items/:id/bookings", auth, async (req, res, next) => {
       startDate: start,
       endDate: end,
     });
+
+    // Award 50 loyalty points for making a booking
+    await User.findByIdAndUpdate(req.user._id, { $inc: { loyaltyPoints: 50 } });
 
     const transaction = await Transaction.create({
       type: "rental",

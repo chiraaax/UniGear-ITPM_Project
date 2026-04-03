@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useAuth } from "../context/AuthContext";
-import { BarChart3, ClipboardList } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 
 import {
   Chart as ChartJS,
@@ -25,8 +24,6 @@ ChartJS.register(
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000/api";
 
 const TaskStatusDashboard = () => {
-  const { token } = useAuth();
-
   //  ONLY ONE STATE (FIXED)
   const [taskStats, setTaskStats] = useState({
     total: 0,
