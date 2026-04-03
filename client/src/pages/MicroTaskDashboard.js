@@ -1,8 +1,13 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, DollarSign, Folder, CheckCircle } from "lucide-react";
-import { Eye } from "lucide-react";
-import { PlusCircle } from "lucide-react";
+import {
+  MapPin,
+  DollarSign,
+  Folder,
+  CheckCircle,
+  Eye,
+  PlusCircle,
+} from "lucide-react";
 
 const API_BASE = "http://localhost:5000/api";
 
@@ -22,14 +27,17 @@ const TaskDashboard = () => {
       if (category !== "All") query.append("category", category);
       if (status !== "All") query.append("status", status);
 
-      const url = `${API_BASE}/tasks${query.toString() ? `?${query.toString()}` : ""}`;
+      const url = `${API_BASE}/tasks${
+        query.toString() ? `?${query.toString()}` : ""
+      }`;
+
       const res = await fetch(url);
       const data = await res.json();
 
       setTasks(
         Array.isArray(data)
           ? data.filter((task) => task.moderationStatus === "approved")
-          : [],
+          : []
       );
     } catch (error) {
       console.error("Error fetching tasks:", error);
@@ -40,16 +48,13 @@ const TaskDashboard = () => {
     fetchTasks();
   }, [fetchTasks]);
 
-  const handlePostTask = () => {
-    navigate("/tasks");
-  };
-
+  // ================= STATUS COLOR =================
   const getStatusStyle = (status) => {
     switch (status?.toLowerCase()) {
       case "pending":
-        return "bg-yellow-600";
+        return "bg-yellow-500";
       case "inprogress":
-        return "bg-blue";
+        return "bg-blue-500";
       case "completed":
         return "bg-green-500";
       default:
@@ -57,22 +62,42 @@ const TaskDashboard = () => {
     }
   };
 
+  //  STATUS IMAGE 
+  const getTaskImage = (task) => {
+    if (task.image) return task.image;
+
+    switch (task.status?.toLowerCase()) {
+      case "completed":
+        return "https://www.shutterstock.com/image-photo/digital-checklist-task-management-concept-260nw-2637270895.jpg";
+      case "inprogress":
+        return "https://www.shutterstock.com/image-photo/businessman-touches-digital-progress-checklist-260nw-2520854157.jpg";
+      case "pending":
+        return "https://t4.ftcdn.net/jpg/17/36/15/07/360_F_1736150767_xvwNLNihVLhLMlbfWmHOnKtmr4Q2a6L8.jpg";
+      default:
+        return "https://www.shutterstock.com/image-photo/businessman-touches-digital-progress-checklist-260nw-2520854157.jpg";
+    }
+  };
+
+  const handlePostTask = () => {
+    navigate("/tasks");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0b1a2a] to-[#0f2a44] text-white p-6">
+
       {/* HERO SECTION */}
-      <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-10 md:py-12 text-center">
-        <p className="text-sm tracking-widest text-blue-300">
-          MICRO-TASK ENGINE
-        </p>
-        <h1 className="text-4xl font-bold">Find & Post Campus Tasks Easily</h1>
-        <p className="text-gray-300 max-w-xl mx-auto">
+      <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-10 md:py-5 text-center">
+        <h4 className="text-4xl font-bold"> MICRO-TASK ENGINE</h4>
+        <p className="text-gray-300 max-w-xl mx-auto text-blue-300">
           Browse available micro-tasks or post your own tasks to get help from
           other students.
         </p>
       </div>
 
+
       {/* CONTROLS */}
-      <div className="flex flex-wrap gap-3 mb-8 justify-center">
+      <div className="flex flex-wrap gap-3 mb-7 justify-center">
+
         <input
           type="text"
           placeholder="Search tasks..."
@@ -82,7 +107,7 @@ const TaskDashboard = () => {
         />
 
         <select
-          className="px-4 py-2 rounded-lg bg-[#1e2f45] border border-gray-600"
+          className="px-4 py-2 rounded-lg bg-[#1e2f45]"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         >
@@ -91,11 +116,10 @@ const TaskDashboard = () => {
           <option value="Cleaning">Cleaning</option>
           <option value="Academic">Academic</option>
           <option value="Technical">Technical</option>
-          <option value="Other">Other</option>
         </select>
 
         <select
-          className="px-4 py-2 rounded-lg bg-[#1e2f45] border border-gray-600"
+          className="px-4 py-2 rounded-lg bg-[#1e2f45]"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
         >
@@ -107,55 +131,78 @@ const TaskDashboard = () => {
 
         <button
           onClick={handlePostTask}
-          className="group bg-gradient-to-r from-emerald-500 to-emerald-600 
-             hover:from-emerald-500 hover:to-green-600
-             px-5 py-2 rounded-xl font-semibold text-white
-             flex items-center gap-2
-             shadow-lg hover:shadow-2xl
-             transition-all duration-300 transform hover:scale-105 active:scale-95"
+          className="flex items-center gap-2 bg-green-500 px-5 py-2 rounded-xl hover:bg-green-600 transition transform hover:scale-105"
         >
-          <PlusCircle
-            size={18}
-            className="drop-shadow-md group-hover:rotate-90 transition-transform duration-300"
-          />
+          <PlusCircle size={18} />
           Post Task
         </button>
+
       </div>
 
       {/* TASK GRID */}
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-6 max-w-6xl mx-auto">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6 max-w-7xl mx-auto">
+
         {tasks.length > 0 ? (
           tasks.map((task) => (
             <div
               key={task._id}
-              className="bg-[#13263a] border border-gray-700 rounded-2xl p-5 shadow-lg hover:scale-[1.03] transition transform"
+              className="bg-[#13263a] rounded-2xl overflow-hidden shadow-lg hover:scale-105 transition"
             >
-              <h3 className="text-lg font-semibold mb-3 bg-gray-700/50 px-2 py-1 rounded-full inline-block">
-                {task.description}
-              </h3>
 
-              <div className="flex items-center gap-2 text-gray-300 text-sm mb-1">
-                <DollarSign size={16} /> LKR {task.budget}
-              </div>
-              <div className="flex items-center gap-2 text-gray-300 text-sm mb-1">
-                <MapPin size={16} /> {task.location}
-              </div>
-              <div className="flex items-center gap-2 text-gray-300 text-sm mb-1">
-                <Folder size={16} /> {task.category}
+              {/* IMAGE */}
+              <div className="relative">
+                <img
+                  src={getTaskImage(task)}
+                  alt="task"
+                  className="w-full h-32 object-cover"
+                />
+
+                <div className="absolute top-2 right-2 bg-black/60 px-3 py-1 rounded-full text-xs flex items-center gap-1">
+                  <CheckCircle size={14} />
+                  {task.status}
+                </div>
               </div>
 
-        {/* STATUS */}
-        <div className="mt-3">
-          <span
-            className={`inline-flex items-center gap-2 px-4 py-1.5 text-sm rounded-full text-white ${getStatusStyle(
-              task.status
-            )}`}
-          >
-            <CheckCircle size={16} /> {task.status}
-          </span>
-        </div>
+              <div className="p-5">
 
-        {/* BUTTON */}
+                {/* TITLE */}
+                <h3 className="text-xl font-bold mb-3 leading-snug">
+                  {task.description}
+                </h3>
+
+                {/* DETAILS */}
+                <div className="text-base text-gray-200 space-y-2">
+
+                  <div className="flex items-center gap-2">
+                    <DollarSign size={18} />
+                    LKR {task.budget}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <MapPin size={18} />
+                    {task.location}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Folder size={18} />
+                    {task.category}
+                  </div>
+
+                </div>
+
+                {/* STATUS */}
+                <div className="mt-4">
+                  <span
+                    className={`px-4 py-1.5 text-sm rounded-full text-white ${getStatusStyle(
+                      task.status
+                    )}`}
+                  >
+                    {task.status}
+                  </span>
+                </div>
+
+                {/* BUTTON */}
+                {/* BUTTON */}
         <button
           onClick={() => navigate(`/task/${task._id}`)}
          className="mt-4 w-full flex items-center justify-center gap-2 
@@ -165,17 +212,21 @@ const TaskDashboard = () => {
              hover:from-#80A3A5 hover:to-#80A3A5
              transition transform hover:scale-105"
               >
-          <Eye size={18} />
-          View Task
-        </button>
+
+                  <Eye size={20} />
+                  View Task
+                </button>
+
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="text-center col-span-full text-gray-400 text-lg">
+            No tasks found
+          </p>
+        )}
+
       </div>
-    ))
-  ) : (
-    <p className="text-gray-400 text-center col-span-full text-lg">
-      No tasks found.
-    </p>
-  )}
-</div>
     </div>
   );
 };
