@@ -140,13 +140,13 @@ const TaskDashboard = () => {
       </div>
 
       {/* TASK GRID */}
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6 max-w-7xl mx-auto">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6 max-w-7xl mx-auto border-t border-gray-700 pt-6">
 
         {tasks.length > 0 ? (
           tasks.map((task) => (
             <div
               key={task._id}
-              className="bg-[#13263a] rounded-2xl overflow-hidden shadow-lg hover:scale-105 transition"
+              className="bg-[#13263a] rounded-2xl overflow-hidden shadow-lg hover:scale-105 transition border border-white/20 cursor-pointer"
             >
 
               {/* IMAGE */}

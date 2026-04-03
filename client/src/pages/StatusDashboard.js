@@ -171,7 +171,7 @@ const StatusDashboard = () => {
 
           {/* BOOKINGS */}
           <div className="bg-slate-900/80 p-5 rounded-2xl border border-slate-700 shadow">
-            <h2 className="flex items-center gap-2 text-pink-400 mb-4">
+            <h2 className="flex items-center gap-2 text-blue-400 mb-4">
               <Package /> My Bookings
             </h2>
 
@@ -179,9 +179,9 @@ const StatusDashboard = () => {
               myBookings.map((b) => (
                 <div
                   key={b._id}
-                  className="flex items-center gap-3 bg-pink-900/20 p-3 rounded-xl mb-2 border border-pink-700/30"
+                  className="flex items-center gap-3 bg-blue-900/20 p-3 rounded-xl mb-2 border border-blue-700/30"
                 >
-                  <div className="w-16 h-16 rounded-lg overflow-hidden border border-pink-700/40 flex-shrink-0">
+                  <div className="w-16 h-16 rounded-lg overflow-hidden border border-blue-700/40 flex-shrink-0">
                     {b.item?.photos?.length > 0 ? (
                       <img
                         src={b.item.photos[0]}
@@ -189,7 +189,7 @@ const StatusDashboard = () => {
                         className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-pink-800/40">
+                      <div className="w-full h-full flex items-center justify-center bg-blue-800/40">
                         📦
                       </div>
                     )}
