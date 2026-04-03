@@ -120,18 +120,23 @@ const RentalPage = () => {
   };
 
   // CHECK IF DATE IS BOOKED (timezone fix)
+  const formatLocalDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const isDateBooked = (itemId, date) => {
     const bookings = availability[itemId] || [];
 
+    const check = formatLocalDate(date);
+
     return bookings.some((b) => {
-      const start = new Date(b.startDate);
-      const end = new Date(b.endDate);
+      const start = formatLocalDate(new Date(b.startDate));
+      const end = formatLocalDate(new Date(b.endDate));
 
-      const check = date.toISOString().split("T")[0];
-      const startStr = start.toISOString().split("T")[0];
-      const endStr = end.toISOString().split("T")[0];
-
-      return check >= startStr && check <= endStr;
+      return check >= start && check <= end;
     });
   };
 
