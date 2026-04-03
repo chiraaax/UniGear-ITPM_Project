@@ -15,10 +15,7 @@
 
 .unigear-app {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 0% -10%, #1d4ed8 0, transparent 55%),
-    radial-gradient(circle at 100% 110%, #22c55e 0, transparent 55%),
-    var(--ug-bg);
+  background: #000000;
   color: var(--ug-text-main);
   display: flex;
   flex-direction: column;

@@ -11,6 +11,10 @@ const userSchema = new mongoose.Schema(
     trustScore: { type: Number, default: 3.0, min: 0, max: 5 },
     role: { type: String, enum: ['student', 'admin'], default: 'student' },
     isSuspended: { type: Boolean, default: false },
+    profileImage: { type: String, default: '' },
+    loyaltyPoints: { type: Number, default: 0 },
+    address: { type: String, default: '' },
+    phone: { type: String, default: '' },
   },
   { timestamps: true }
 );
