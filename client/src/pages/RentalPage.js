@@ -3,6 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
+import {
+  Plus,
+  User,
+} from "lucide-react";
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000/api";
 const ITEMS_PER_PAGE = 6;
@@ -519,7 +523,7 @@ const RentalPage = () => {
 
       <div className="page-header">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-50 md:text-3xl">
+          <h1 className="page-title">
             UniGear Rental System
           </h1>
           <p className="page-description">
@@ -527,7 +531,7 @@ const RentalPage = () => {
           </p>
         </div>
         <button className="add-item-btn" onClick={handleAddNewItem}>
-          <span className="btn-icon">➕</span>
+          <Plus size={18} />
           Add New Item
         </button>
       </div>
@@ -633,7 +637,7 @@ const RentalPage = () => {
               {item.owner && (
                 <div className="owner-section">
                   <div className="owner-avatar">
-                    {item.owner.name?.charAt(0).toUpperCase()}
+                    <User size={16} />
                   </div>
                   <div className="owner-details">
                     <span className="owner-name">{item.owner.name}</span>
@@ -988,6 +992,12 @@ const RentalPage = () => {
           gap: 1rem;
         }
 
+        .page-title {
+          font-size: 2rem;
+          font-weight: 700;
+          color: white;
+        }
+
         .page-header h1 {
           font-size: 2rem;
           font-weight: semibold;
@@ -999,7 +1009,6 @@ const RentalPage = () => {
 
         .page-description {
           color: #94a3b8;
-          margin-top: 0.5rem;
         }
 
         .add-item-btn {
@@ -1068,7 +1077,7 @@ const RentalPage = () => {
 
         .items-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
           gap: 1.5rem;
           margin-bottom: 2rem;
         }
@@ -1241,7 +1250,8 @@ const RentalPage = () => {
         .owner-avatar {
           width: 32px;
           height: 32px;
-          background: linear-gradient(135deg, #4f46e5, #22c55e);
+          background: linear-gradient(135deg, #7e57e8, #ad1ad2);
+
           border-radius: 50%;
           display: flex;
           align-items: center;
@@ -1507,7 +1517,7 @@ const RentalPage = () => {
           padding: 0.6rem;
           border-radius: 999px;
           border: none;
-          background: linear-gradient(135deg, #4f46e5, #22c55e);
+          background: linear-gradient(135deg, #7e57e8, #9b3379);
           color: white;
           font-weight: 600;
           font-size: 0.85rem;
