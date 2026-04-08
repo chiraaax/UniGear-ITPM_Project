@@ -1,4 +1,4 @@
-import { Package, ListChecks, ArrowRight, ShieldCheck, Users } from "lucide-react";
+import { Package, ListChecks, ArrowRight, ShieldCheck, Users, MessageCircle } from "lucide-react";
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Chatbot from '../components/Chatbot';
@@ -114,7 +114,7 @@ const Dashboard = () => {
               </ul>
             </div>
 
-            <div className="mt-6 inline-flex items-center text-emerald-400 text-sm font-medium">
+            <div className="mt-6 inline-flex text-justify-center items-center text-emerald-400 text-sm font-medium px-3 py-1 rounded-lg bg-size-200 group-hover:bg-size-100 transition">
               View Tasks <ArrowRight className="ml-2" size={16} />
             </div>
           </button>
@@ -148,10 +148,11 @@ const Dashboard = () => {
 
       </div>
 
-      {/* CHATBOT */}
+       {/* CHATBOT */}
       {!isChatOpen && (
         <div className="chatbot-icon" onClick={() => setIsChatOpen(true)}>
-          🤖
+          <MessageCircle size={28} />
+          <div className="cb-icon-pulse"></div>
         </div>
       )}
       {isChatOpen && <Chatbot closeChat={() => setIsChatOpen(false)} />}

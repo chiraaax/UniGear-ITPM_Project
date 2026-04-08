@@ -223,27 +223,22 @@ const StatusDashboard = () => {
     try {
       setCompletingId(id);
 
-      const res = await fetch(`${API_BASE}/tasks/status/${id}`, {
+      await fetch(`${API_BASE}/tasks/status/${id}`, {
         method: "PUT",
-        headers: authHeaders,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ status: "Completed" }),
       });
 
-      if (!res.ok) {
-        throw new Error("Failed to complete task");
-      }
-
-      const updatedTask = await res.json();
-
       setMyTasks((prev) =>
-        prev.map((t) =>
-          t._id === id ? { ...t, status: updatedTask.status || "Completed" } : t
-        )
+        prev.map((t) => (t._id === id ? { ...t, status: "Completed" } : t))
       );
 
       showNotification("Task completed ✅");
     } catch {
-      showNotification("Complete failed ❌", "error");
+      showNotification("Failed to complete task ❌", "error");
     } finally {
       setCompletingId(null);
     }
@@ -263,11 +258,15 @@ const StatusDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 text-white p-6">
-
-      {/* Notification */}
+    <div className="min-h-screen bg-gradient-to-br from-[#0f172a] to-[#020617] text-white p-6">
+      
+      {/* ================= NOTIFICATION ================= */}
       {notification && (
-        <div className="fixed top-4 right-4 bg-emerald-600 px-5 py-2 rounded-lg shadow-lg animate-pulse">
+        <div
+          className={`fixed top-4 right-4 px-5 py-2 rounded-lg shadow-lg ${
+            notification.type === "error" ? "bg-red-600" : "bg-emerald-600"
+          } animate-pulse`}
+        >
           {notification.message}
         </div>
       )}
@@ -309,14 +308,14 @@ const StatusDashboard = () => {
       <p className="text-sm text-slate-400">Loading your activity…</p>
       )}
 
-      <div className="grid gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)]">
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* LEFT SIDE (RENTALS + BOOKINGS) */}
+        <section className="space-y-6">
 
-        {/* ================= RENTAL ITEMS ================= */}
-
-        <section className="space-y-4">
-          <div>
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-purple-400 mb-4">
-              <ListCollapse size={18}/> My Rental Listings
+          {/* RENTALS */}
+          <div className="bg-slate-900/80 p-5 rounded-2xl border border-slate-700 shadow">
+            <h2 className="flex items-center gap-2 text-purple-400 mb-4">
+              <ListCollapse /> My Rentals
             </h2>
             <div className="mt-2 grid max-h-[220px] gap-3 overflow-y-auto pr-1 text-sm">
               {myItems.map((item) => (
@@ -470,29 +469,26 @@ const StatusDashboard = () => {
 
             {pendingTasks.length > 0 ? (
               pendingTasks.map((task) => (
-                <div key={task._id} className="bg-slate-800 p-4 rounded-xl mb-2">
-                  <p className="font-medium">{task.description}</p>
+                <div
+                  key={task._id}
+                  className="bg-gradient-to-r from-yellow-900/20 to-yellow-700/10 p-4 rounded-xl mb-2 border border-yellow-700/20"
+                >
+                  <p className="font-semibold">{task.description}</p>
                   <p className="text-sm text-gray-400">LKR {task.budget}</p>
 
                   <div className="flex gap-2 mt-3">
-                    <button
-                      onClick={() => handleEditTask(task._id)}
-                      className="flex items-center gap-1 px-3 py-1 bg-yellow-600 rounded hover:bg-yellow-700"
-                    >
+                    <button className="bg-yellow-500 px-3 py-1 rounded flex items-center gap-1 hover:bg-yellow-600">
                       <Pencil size={14} /> Edit
                     </button>
 
-                    <button
-                      onClick={() => handleDeleteTask(task._id)}
-                      className="flex items-center gap-1 px-3 py-1 bg-red-600 rounded hover:bg-red-700"
-                    >
+                    <button className="bg-red-500 px-3 py-1 rounded flex items-center gap-1 hover:bg-red-600">
                       <Trash2 size={14} /> Delete
                     </button>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-gray-400">No pending tasks</p>
+              <p className="text-gray-400 text-sm">No pending tasks</p>
             )}
           </div>
 
@@ -504,27 +500,27 @@ const StatusDashboard = () => {
 
             {inProgressTasks.length > 0 ? (
               inProgressTasks.map((task) => (
-                <div key={task._id} className="bg-slate-800 p-4 rounded-xl mb-2">
+                <div
+                  key={task._id}
+                  className="bg-gradient-to-r from-blue-900/20 to-blue-700/10 p-4 rounded-xl mb-2 border border-blue-700/20"
+                >
                   <p>{task.description}</p>
 
                   <button
                     onClick={() => handleCompleteTask(task._id)}
                     disabled={completingId === task._id}
-                    className="flex items-center gap-1 px-3 py-1 mt-2 bg-green-600 rounded hover:bg-green-700 disabled:opacity-50"
+                    className="mt-2 bg-green-500 px-3 py-1 rounded flex items-center gap-1 hover:bg-green-600 disabled:opacity-50"
                   >
                     <CheckCircle size={14} />
-                    {completingId === task._id
-                      ? "Completing..."
-                      : "Complete Task"}
+                    {completingId === task._id ? "Completing..." : "Complete"}
                   </button>
                 </div>
               ))
             ) : (
-              <p className="text-gray-400">No in-progress tasks</p>
+              <p className="text-gray-400 text-sm">No in-progress tasks</p>
             )}
           </div>
         </section>
-
       </div>
 
       <style>{`

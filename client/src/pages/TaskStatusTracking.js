@@ -1,24 +1,22 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { BarChart3, ClipboardList } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 import {
   Chart as ChartJS,
-  ArcElement,
   Tooltip,
   Legend,
   CategoryScale,
   LinearScale,
   BarElement,
 } from "chart.js";
-import { Pie, Bar } from "react-chartjs-2";
+import {  Bar } from "react-chartjs-2";
 
 ChartJS.register(
-  ArcElement,
   Tooltip,
   Legend,
   CategoryScale,
   LinearScale,
-  BarElement
+  BarElement,
 );
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000/api";
@@ -31,6 +29,7 @@ const TaskStatusTracking = () => {
     inProgress: 0,
     completed: 0,
     byCategory: {},
+    byWeek: {},
   });
   const [loading, setLoading] = useState(true);
 
@@ -50,6 +49,7 @@ const TaskStatusTracking = () => {
         inProgress: 0,
         completed: 0,
         byCategory: {},
+        byWeek: {},
       };
 
       tasks.forEach((task) => {
@@ -59,6 +59,12 @@ const TaskStatusTracking = () => {
 
         const category = task.category || "Uncategorized";
         stats.byCategory[category] = (stats.byCategory[category] || 0) + 1;
+
+        const dateSource = task.createdAt || task.updatedAt;
+        if (dateSource) {
+          const dateKey = new Date(dateSource).toISOString().split("T")[0];
+          stats.byWeek[dateKey] = (stats.byWeek[dateKey] || 0) + 1;
+        }
       });
 
       setTaskStats(stats);
@@ -75,19 +81,6 @@ const TaskStatusTracking = () => {
     }
   }, [token, fetchTaskStats]);
 
-  const pieData = useMemo(
-    () => ({
-      labels: ["Pending", "In Progress", "Completed"],
-      datasets: [
-        {
-          data: [taskStats.pending, taskStats.inProgress, taskStats.completed],
-          backgroundColor: ["#facc15", "#3b82f6", "#22c55e"],
-        },
-      ],
-    }),
-    [taskStats.pending, taskStats.inProgress, taskStats.completed]
-  );
-
   const barData = useMemo(
     () => ({
       labels: ["Pending", "In Progress", "Completed"],
@@ -95,13 +88,78 @@ const TaskStatusTracking = () => {
         {
           label: "Tasks",
           data: [taskStats.pending, taskStats.inProgress, taskStats.completed],
-          backgroundColor: ["#facc15", "#3b82f6", "#22c55e"],
+          backgroundColor: ["#f8de73", "#81aaed", "#84e0a6"],
         },
       ],
     }),
-    [taskStats.pending, taskStats.inProgress, taskStats.completed]
+    [taskStats.pending, taskStats.inProgress, taskStats.completed],
   );
 
+  const barOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: "#f1f5f9" } },
+    },
+    scales: {
+      x: {
+        ticks: { color: "#e2e8f0" },
+        grid: { color: "rgba(255,255,255,0.1)" },
+      },
+      y: {
+        beginAtZero: true,
+        ticks: { color: "#e2e8f0" },
+        grid: { color: "rgba(255,255,255,0.1)" },
+      },
+    },
+  };
+
+ // Line chart (trend over time)
+  const lineData = useMemo(() => {
+    const weeks = taskStats.byWeek || {};
+    const dates = Object.keys(weeks).sort();
+    const counts = dates.map(d => weeks[d]);
+
+    return {
+      labels: dates,
+      datasets: [
+        {
+          label: "Tasks over Time",
+          data: counts,
+          borderColor: "rgba(79, 70, 229, 1)", // Indigo
+          backgroundColor: "rgba(167, 139, 250, 0.3)", // Gradient fill
+          fill: true,
+          tension: 0.3,
+          pointBackgroundColor: "rgba(79, 70, 229, 1)",
+          pointHoverRadius: 6,
+          pointRadius: 4,
+        },
+      ],
+    };
+  }, [taskStats.byWeek]);
+
+  const lineOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: true, labels: { color: "#f1f5f9" } },
+      tooltip: { mode: "index", intersect: false },
+    },
+    scales: {
+      x: {
+        type: "category",
+        title: { display: true, text: "Date", color: "#f1f5f9" },
+        ticks: { color: "#e2e8f0" },
+        grid: { color: "rgba(255,255,255,0.1)" },
+      },
+      y: {
+        beginAtZero: true,
+        title: { display: true, text: "Number of Tasks", color: "#f1f5f9" },
+        ticks: { color: "#e2e8f0" },
+        grid: { color: "rgba(255,255,255,0.1)" },
+      },
+    },
+  };
   if (!token) {
     return (
       <div className="p-6 text-center text-slate-400">
@@ -125,7 +183,7 @@ const TaskStatusTracking = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700 shadow-lg hover:scale-105 transition">
                 <div className="flex items-center gap-3 mb-2">
-                  <ClipboardList className="text-white" />
+                  <BarChart3 className="text-white" />
                   <p className="text-slate-400">Total Tasks</p>
                 </div>
                 <p className="text-3xl font-bold">{taskStats.total}</p>
@@ -133,17 +191,23 @@ const TaskStatusTracking = () => {
 
               <div className="bg-yellow-900/20 p-5 rounded-xl border border-yellow-700/30">
                 <p className="text-yellow-300 text-base">Pending</p>
-                <p className="text-3xl font-bold text-yellow-400">{taskStats.pending}</p>
+                <p className="text-3xl font-bold text-yellow-400">
+                  {taskStats.pending}
+                </p>
               </div>
 
               <div className="bg-blue-900/20 p-5 rounded-xl border border-blue-700/30">
                 <p className="text-blue-300 text-base">In Progress</p>
-                <p className="text-3xl font-bold text-blue-400">{taskStats.inProgress}</p>
+                <p className="text-3xl font-bold text-blue-400">
+                  {taskStats.inProgress}
+                </p>
               </div>
 
               <div className="bg-green-900/20 p-5 rounded-xl border border-green-700/30">
                 <p className="text-green-300 text-base">Completed</p>
-                <p className="text-3xl font-bold text-green-400">{taskStats.completed}</p>
+                <p className="text-3xl font-bold text-green-400">
+                  {taskStats.completed}
+                </p>
               </div>
             </div>
 
@@ -154,31 +218,45 @@ const TaskStatusTracking = () => {
 
               {Object.keys(taskStats.byCategory).length > 0 ? (
                 <div className="space-y-3">
-                  {Object.entries(taskStats.byCategory).map(([category, count]) => (
-                    <div
-                      key={category}
-                      className="flex items-center justify-between p-4 bg-slate-800 rounded-xl hover:bg-slate-700 transition"
-                    >
-                      <span>{category}</span>
-                      <span className="bg-slate-700 px-3 py-1 rounded-full text-sm font-semibold">
-                        {count}
-                      </span>
-                    </div>
-                  ))}
+                  {Object.entries(taskStats.byCategory).map(
+                    ([category, count]) => (
+                      <div
+                        key={category}
+                        className="flex items-center justify-between p-4 bg-slate-800 rounded-xl hover:bg-slate-700 transition"
+                      >
+                        <span>{category}</span>
+                        <span className="bg-slate-700 px-3 py-1 rounded-full text-sm font-semibold">
+                          {count}
+                        </span>
+                      </div>
+                    ),
+                  )}
                 </div>
               ) : (
                 <p className="text-slate-400">No tasks available.</p>
               )}
             </div>
 
-            <div className="bg-slate-900 p-7 rounded-2xl border border-slate-700 shadow-lg">
+           <div className="bg-slate-900 p-7 rounded-2xl border border-slate-700 shadow-lg">
               <div className="flex items-center gap-2 mb-5">
                 <BarChart3 className="text-indigo-400" />
                 <h2 className="text-2xl font-semibold">Status Distribution</h2>
               </div>
 
+              {taskStats.total > 0 ? (
+                <div className="h-80 mb-10">
+                  <Bar data={barData} options={barOptions} />
+                </div>
+              ) : (
+                <p className="text-slate-400 mb-10">No status data available.</p>
+              )}
+
               {[
-                { label: "Pending", value: taskStats.pending, color: "bg-yellow-500" },
+                {
+                  label: "Pending",
+                  value: taskStats.pending,
+                  color: "bg-yellow-500",
+                },
                 {
                   label: "In Progress",
                   value: taskStats.inProgress,
@@ -195,37 +273,41 @@ const TaskStatusTracking = () => {
                     ? Math.round((item.value / taskStats.total) * 100)
                     : 0;
 
-                return (
+                 return (
                   <div key={item.label} className="mb-4">
                     <div className="flex justify-between text-sm mb-1">
                       <span>{item.label}</span>
                       <span className="font-semibold">{percent}%</span>
                     </div>
 
-                    <div className="w-full bg-slate-700 h-3 rounded-full overflow-hidden">
-                      <div
-                        className={`${item.color} h-full rounded-full transition-all duration-500`}
+                   <div className="w-full bg-slate-700 h-3 rounded-full overflow-hidden">
+                     <div
+                       className={`${item.color} h-full rounded-full transition-all duration-500`}
                         style={{ width: `${percent}%` }}
-                      />
+                     />
                     </div>
                   </div>
-                );
+                 );
               })}
+            </div> 
 
-              <div className="grid md:grid-cols-2 gap-8 mt-10">
-                <div className="bg-slate-800 p-6 rounded-xl shadow">
-                  <h2 className="text-xl mb-4">Task Distribution (Pie)</h2>
-                  <Pie data={pieData} />
-                </div>
 
-                <div className="bg-slate-800 p-6 rounded-xl shadow">
-                  <h2 className="text-xl mb-4">Task Status (Bar)</h2>
-                  <Bar data={barData} />
+
+             {/* Line Chart Trend */}
+            <div className="bg-slate-800 p-6 rounded-xl shadow border border-slate-700">
+              <h2 className="text-xl mb-4">Tasks Trend Over Time</h2>
+              {Object.keys(taskStats.byWeek).length > 0 ? (
+                <div className="h-96">
+                  <Bar data={lineData} options={lineOptions} />
                 </div>
-              </div>
+              ) : (
+                <p className="text-slate-400">No trend data.</p>
+              )}
             </div>
           </div>
+          
         )}
+        
       </div>
     </div>
   );

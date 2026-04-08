@@ -11,10 +11,10 @@ const s3 = new AWS.S3({
 // Generate signed URL
 router.post("/generate-url", async (req, res) => {
   try {
-    const { fileName, fileType } = req.body;
+    const { fileName, fileType, folder = "items" } = req.body;
 
     const safeFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const key = `items/${Date.now()}-${safeFileName}`;
+    const key = `${folder}/${Date.now()}-${safeFileName}`;
 
     if (!fileType.startsWith("image/")) {
       return res.status(400).json({

@@ -1,12 +1,13 @@
 const express = require('express');
 const Feedback = require('../models/Feedback');
-const auth = require('../middleware/auth');
+const User = require('../models/User');
+const authMiddleware = require('../middleware/auth');
 const { sendSMS } = require('../utils/smsService');
 
 const router = express.Router();
 
-// CREATE feedback (no auth required for submission)
-router.post('/', async (req, res, next) => {
+// CREATE feedback (optional auth support)
+router.post('/', authMiddleware.optionalAuth, async (req, res, next) => {
   try {
     const { name, email, phone, feedback, rating, itemId } = req.body;
 
@@ -24,6 +25,11 @@ router.post('/', async (req, res, next) => {
       user: req.user ? req.user._id : null,
       item: itemId || null,
     });
+
+    // Award 20 loyalty points for giving feedback if user is authenticated
+    if (req.user) {
+      await User.findByIdAndUpdate(req.user._id, { $inc: { loyaltyPoints: 20 } });
+    }
 
     // Send SMS notification to the user
     const ratingText = rating ? `\n\nYour rating: ${rating}/5 stars` : '';
@@ -52,7 +58,7 @@ router.post('/', async (req, res, next) => {
 });
 
 // LIST all feedback (for admin view)
-router.get('/', auth, async (req, res, next) => {
+router.get('/', authMiddleware, async (req, res, next) => {
   try {
     const feedbacks = await Feedback.find().sort({ createdAt: -1 }).populate('user', 'name');
     res.json(feedbacks);
@@ -72,7 +78,7 @@ router.get('/item/:itemId', async (req, res, next) => {
 });
 
 // UPDATE feedback
-router.put('/:id', auth, async (req, res, next) => {
+router.put('/:id', authMiddleware, async (req, res, next) => {
   try {
     const feedback = await Feedback.findById(req.params.id);
     if (!feedback) {
@@ -94,7 +100,7 @@ router.put('/:id', auth, async (req, res, next) => {
 });
 
 // DELETE feedback
-router.delete('/:id', auth, async (req, res, next) => {
+router.delete('/:id', authMiddleware, async (req, res, next) => {
   try {
     const feedback = await Feedback.findByIdAndDelete(req.params.id);
     if (!feedback) {

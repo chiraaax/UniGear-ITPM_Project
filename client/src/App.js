@@ -1,7 +1,7 @@
 import React from "react";
 import logo from "./assets/logo.png";
 import {
-  BrowserRouter as Router,
+  BrowserRouter,
   Routes,
   Route,
   Link,
@@ -10,12 +10,14 @@ import {
   useLocation,
 } from "react-router-dom";
 import "./App.css";
+import 'react-calendar/dist/Calendar.css';
 import Dashboard from "./pages/Dashboard";
 import RentalPage from "./pages/RentalPage";
 import TaskPage from "./pages/TaskPage";
 import AuthPage from "./pages/AuthPage";
 import StatusDashboard from "./pages/StatusDashboard";
 import FeedbackPage from "./pages/FeedbackPage";
+import ProfilePage from './pages/ProfilePage';
 import { useAuth } from "./context/AuthContext";
 import MicroTaskDashboard from "./pages/MicroTaskDashboard";
 import TaskStatusDashboard from "./pages/TaskStatusDashboard";
@@ -25,7 +27,6 @@ import TaskStatusTracking from "./pages/TaskStatusTracking";
 import TaskDetail from "./pages/TaskDetail";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminLoginPage from "./pages/AdminLoginPage";
-//import FeedbackDisplayPage from "./pages/FeedbackDisplayPage";
 import FeedbackAdminDashboard from "./pages/FeedbackAdminDashboard";
 import TestimonialsPage from './pages/TestimonialsPage';
 
@@ -52,10 +53,9 @@ function App() {
   const isLight = theme === "light";
 
   return (
-    <Router>
-      <div
-        className={`min-h-screen flex flex-col ${isLight ? "bg-slate-100 text-slate-900" : "bg-slate-950 bg-gradient-to-br from-slate-950 via-slate-900 to-sky-900/60"}`}
-      >
+    <div
+      className={`min-h-screen flex flex-col ${isLight ? "bg-slate-100 text-slate-900" : "bg-slate-950 bg-gradient-to-br from-slate-950 via-slate-900 to-sky-900/60"}`}
+    >
         <header
           className={`sticky top-0 z-20 border-b backdrop-blur ${isLight ? "border-slate-200 bg-white/75" : "border-slate-800/70 bg-slate-950/70"}`}
         >
@@ -263,16 +263,22 @@ function App() {
               </button>
               {user ? (
                 <>
-                  <span
-                    className={`hidden md:inline ${isLight ? "text-slate-700" : "text-slate-300"}`}
+                  <Link
+                    to="/profile"
+                    className="group relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-sky-500/50 bg-sky-500/10 ring-2 ring-sky-500/20 transition hover:ring-sky-500/50"
                   >
-                    {user.name}{" "}
-                    <span
-                      className={isLight ? "text-slate-500" : "text-slate-500"}
-                    >
-                      · Trust {user.trustScore?.toFixed(1) ?? "—"}
-                    </span>
-                  </span>
+                    {user.profileImage ? (
+                      <img
+                        src={user.profileImage}
+                        alt="Profile"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-sm font-bold text-sky-500">
+                        {user.name?.[0].toUpperCase()}
+                      </span>
+                    )}
+                  </Link>
                   <button
                     type="button"
                     onClick={logout}
@@ -308,6 +314,7 @@ function App() {
             <Route path="/feedback" element={<FeedbackPage />} />
             <Route path="/feedbacks" element={<TestimonialsPage />} />
             <Route path="/testimonials" element={<TestimonialsPage />} />
+            <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/auth" />} />
             <Route path="/admin/login" element={<AdminLoginPage />} />
             <Route
               path="/admin"
@@ -333,7 +340,6 @@ function App() {
           UniGear · Built for campus communities
         </footer>
       </div>
-    </Router>
   );
 }
 
