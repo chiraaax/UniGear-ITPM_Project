@@ -8,6 +8,8 @@ import "react-calendar/dist/Calendar.css";
 import {
   Plus,
   User,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000/api";
@@ -30,7 +32,7 @@ const RentalPage = () => {
 
   const [bookingData, setBookingData] = useState({});
   const [isBooking, setIsBooking] = useState(null);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
   const [showModal, setShowModal] = useState(false);
 
   // NEW STATES
@@ -317,7 +319,7 @@ const RentalPage = () => {
         return;
       }
 
-      alert("Item deleted successfully ✅");
+      showToast("✓ Item deleted successfully!");
       fetchItems();
     } catch (err) {
       console.error(err);
@@ -389,8 +391,8 @@ const RentalPage = () => {
         return;
       }
 
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
+      setToastMessage("✓ Booking successful!");
+      setTimeout(() => setToastMessage(""), 3000);
       setBookingData((prev) => ({
         ...prev,
         [itemId]: { startDate: "", endDate: "" },
@@ -453,8 +455,11 @@ const RentalPage = () => {
       resetForm();
       setShowModal(false);
       fetchItems();
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
+      showToast(
+        editingItem
+          ? "✓ Item updated successfully!"
+          : "✓ Item added successfully!"
+      );
     } catch (err) {
       console.error(err);
     }
@@ -487,6 +492,11 @@ const RentalPage = () => {
       default:
         return "📦";
     }
+  };
+
+  const showToast = (message) => {
+    setToastMessage(message);
+    setTimeout(() => setToastMessage(""), 3000);
   };
 
   // Pagination
@@ -531,11 +541,9 @@ const RentalPage = () => {
 
   return (
     <div className="rental-page-container">
-      {showSuccess && (
+      {toastMessage && (
         <div className="success-toast">
-          {editingItem
-            ? "✓ Item updated successfully!"
-            : "✓ Booking successful!"}
+          {toastMessage}
         </div>
       )}
 
@@ -721,13 +729,15 @@ const RentalPage = () => {
                     onClick={() => handleEdit(item)}
                     className="edit-button"
                   >
-                    ✏️ Edit
+                    <Pencil size={16} />
+                    Edit
                   </button>
                   <button
                     onClick={() => handleDelete(item._id)}
                     className="delete-button"
                   >
-                    🗑️ Delete
+                    <Trash2 size={16} />
+                    Delete
                   </button>
                 </div>
               )}
@@ -1050,7 +1060,7 @@ const RentalPage = () => {
         }
 
         .add-item-btn {
-          background: linear-gradient(135deg, #4f46e5, #3b82f6);
+          background: linear-gradient(135deg, #3b82f6);
           color: white;
           border: none;
           padding: 0.55rem 1rem;
@@ -1288,7 +1298,7 @@ const RentalPage = () => {
         .owner-avatar {
           width: 32px;
           height: 32px;
-          background: linear-gradient(135deg, #7e57e8, #ad1ad2);
+          background: linear-gradient(135deg, #776cdb, #2e1ae1);
 
           border-radius: 50%;
           display: flex;
@@ -1329,7 +1339,7 @@ const RentalPage = () => {
           margin-bottom: 0.75rem;
           border-radius: 0.75rem;
           border: 1px solid rgba(96, 165, 250, 0.4);
-          background: rgba(59, 130, 246, 0.2);
+          background: rgba(15, 23, 42, 0.5);
           color: #93c5fd;
           font-weight: 500;
           cursor: pointer;
@@ -1353,7 +1363,7 @@ const RentalPage = () => {
           padding: 0.5rem;
           border-radius: 0.75rem;
           border: 1px solid rgba(96, 165, 250, 0.4);
-          background: rgba(79, 70, 229, 0.2);
+          background: rgba(15, 23, 42, 0.5);
           color: #e5e7eb;
           font-size: 0.8rem;
           font-weight: 500;
@@ -1518,10 +1528,14 @@ const RentalPage = () => {
           font-weight: 500;
           cursor: pointer;
           transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
         }
 
         .edit-button {
-          background: linear-gradient(135deg, #4f46e5, #3b82f6);
+          background: #eab308;
           color: white;
         }
 
@@ -1581,7 +1595,7 @@ const RentalPage = () => {
           padding: 0.6rem;
           border-radius: 999px;
           border: none;
-          background: linear-gradient(135deg, #7e57e8, #9b3379);
+          background: linear-gradient(135deg,  #6959f6, #10094f);
           color: white;
           font-weight: 600;
           font-size: 0.85rem;
