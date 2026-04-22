@@ -6,8 +6,12 @@ import {
   AlertTriangle, UserCheck, UserX, RefreshCw, Activity, TrendingUp, 
   Calendar, User, Settings, LogIn, LogOut, ShoppingCart, MessageSquare, 
   Star, Flag, Plus, Undo2, Briefcase, LayoutGrid, List, ArrowUpDown,
-  X, ChevronDown
+  X, ChevronDown, CheckSquare, Square
 } from 'lucide-react';
+import AdminAnalyticsChart from '../components/admin/AdminAnalyticsChart';
+import DisputesTab from '../components/admin/DisputesTab';
+import SystemSettingsTab from '../components/admin/SystemSettingsTab';
+import UserProfileDrawer from '../components/admin/UserProfileDrawer';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
 const DEFAULT_AUDIT_PAGE_SIZE = 25;
@@ -78,6 +82,9 @@ const AdminDashboard = () => {
   const [editingRental, setEditingRental] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
   const [rejectDraft, setRejectDraft] = useState(null);
+  const [selectedBulkRentals, setSelectedBulkRentals] = useState([]);
+  const [selectedBulkTasks, setSelectedBulkTasks] = useState([]);
+  const [selectedUserForProfile, setSelectedUserForProfile] = useState(null);
   
   // Filters for All Rentals/Tasks views
   const [rentalSearchQuery, setRentalSearchQuery] = useState('');
@@ -152,6 +159,7 @@ const AdminDashboard = () => {
     setEditingRental(null);
     setEditingTask(null);
     setSelectedLogDetails(null);
+    setSelectedUserForProfile(null);
   };
 
   const authHeaders = useMemo(
@@ -209,11 +217,11 @@ const AdminDashboard = () => {
         return;
       }
       
-      setAllRentals(rentalsData);
-      setAllTasks(tasksData);
-      setFilteredRentals(rentalsData);
-      setFilteredTasks(tasksData);
-      setUsers(usersData);
+      setAllRentals(rentalsData.items || rentalsData);
+      setAllTasks(tasksData.items || tasksData);
+      setFilteredRentals(rentalsData.items || rentalsData);
+      setFilteredTasks(tasksData.items || tasksData);
+      setUsers(usersData.items || usersData);
       setAuditLogs(Array.isArray(logsData?.items) ? logsData.items : []);
       setAuditTotal(Number(logsData?.total) || 0);
       setAuditStats(calculateAuditStats(logsData?.items || []));
@@ -396,6 +404,24 @@ const AdminDashboard = () => {
     }
   };
 
+  const executeBulkModerate = async (type, ids, status) => {
+    if (ids.length === 0) return;
+    try {
+      const res = await fetch(`${API_BASE}/admin/${type}/bulk-moderate`, {
+        method: 'PATCH',
+        headers: authHeaders,
+        body: JSON.stringify({ ids, moderationStatus: status })
+      });
+      if (!res.ok) throw new Error('Bulk moderation failed');
+      pushToast('success', 'Success', `Successfully ${status} ${ids.length} items`);
+      setSelectedBulkRentals([]);
+      setSelectedBulkTasks([]);
+      loadAllData();
+    } catch (err) {
+      pushToast('error', 'Error', err.message);
+    }
+  };
+
   const deleteEntity = async (type, id) => {
     const res = await fetch(`${API_BASE}/admin/${type}/${id}`, {
       method: 'DELETE',
@@ -535,9 +561,29 @@ const AdminDashboard = () => {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      pushToast('success', 'Export complete', `Exported ${auditTotal} audit logs`);
+      pushToast('success', 'Export complete', `Exported audit logs`);
     } catch (err) {
       pushToast('error', 'Export failed', 'Could not export audit logs');
+    }
+  };
+
+  const exportData = async (type) => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/${type}/export`, { headers: authHeaders });
+      if (!res.ok) throw new Error('Export failed.');
+      const csvText = await res.text();
+      const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `admin-${type}-export-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      pushToast('success', 'Export complete', `Exported ${type}`);
+    } catch (err) {
+      pushToast('error', 'Export failed', `Could not export ${type}`);
     }
   };
 
@@ -712,13 +758,16 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* Analytics Cards with Glass Morphism */}
-        {analytics && queueStats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <StatCard icon={Package} title="Total Rentals" value={allRentals.length} subtitle={`${pendingRentals.length} pending, ${approvedRentals.length} approved`} gradient="from-blue-500/20 to-cyan-500/20 text-blue-400" />
-            <StatCard icon={Clock} title="Total Tasks" value={allTasks.length} subtitle={`${pendingTasks.length} pending, ${approvedTasks.length} approved`} gradient="from-purple-500/20 to-pink-500/20 text-purple-400" />
-            <StatCard icon={AlertTriangle} title="Stale Items" value={(queueStats.staleRentals || 0) + (queueStats.staleTasks || 0)} subtitle={`${queueStats.staleRentals} rentals, ${queueStats.staleTasks} tasks`} gradient="from-yellow-500/20 to-orange-500/20 text-yellow-400" />
-            <StatCard icon={Users} title="Total Users" value={users.length} subtitle="All registered users" gradient="from-green-500/20 to-emerald-500/20 text-green-400" />
+        {/* Analytics Section */}
+        {analytics && (
+          <div className="mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+              <StatCard icon={Package} title="Total Rentals" value={allRentals.length} subtitle={`${pendingRentals.length} pending, ${approvedRentals.length} approved`} gradient="from-blue-500/20 to-cyan-500/20 text-blue-400" />
+              <StatCard icon={Clock} title="Total Tasks" value={allTasks.length} subtitle={`${pendingTasks.length} pending, ${approvedTasks.length} approved`} gradient="from-purple-500/20 to-pink-500/20 text-purple-400" />
+              <StatCard icon={AlertTriangle} title="Stale Items" value={(queueStats?.staleRentals || 0) + (queueStats?.staleTasks || 0)} subtitle={`${queueStats?.staleRentals || 0} rentals, ${queueStats?.staleTasks || 0} tasks`} gradient="from-yellow-500/20 to-orange-500/20 text-yellow-400" />
+              <StatCard icon={Users} title="Total Users" value={users.length} subtitle="All registered users" gradient="from-green-500/20 to-emerald-500/20 text-green-400" />
+            </div>
+            {analytics.trends && <AdminAnalyticsChart data={analytics.trends} />}
           </div>
         )}
 
@@ -731,6 +780,8 @@ const AdminDashboard = () => {
               { id: 'allTasks', label: 'All Tasks', icon: Briefcase, count: allTasks.length },
               { id: 'users', label: 'Users', icon: Users, count: users.length },
               { id: 'audit', label: 'Audit Logs', icon: Shield, count: auditTotal },
+              { id: 'disputes', label: 'Disputes', icon: AlertTriangle, count: 0 },
+              { id: 'settings', label: 'Settings', icon: Settings, count: 0 },
             ].map((tab) => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                 className={`px-5 py-3 font-medium transition-all relative whitespace-nowrap flex items-center gap-2 rounded-t-xl backdrop-blur-sm ${
@@ -756,15 +807,29 @@ const AdminDashboard = () => {
             <div className="space-y-8">
               {/* Pending Rentals */}
               <div>
-                <h2 className="text-2xl font-semibold text-white mb-4 flex items-center gap-2">
-                  <div className="p-2 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-xl">
-                    <Package className="w-5 h-5 text-blue-400" />
-                  </div>
-                  Pending Rentals ({pendingRentals.length})
-                </h2>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-2xl font-semibold text-white flex items-center gap-2">
+                    <div className="p-2 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-xl">
+                      <Package className="w-5 h-5 text-blue-400" />
+                    </div>
+                    Pending Rentals ({pendingRentals.length})
+                  </h2>
+                  {selectedBulkRentals.length > 0 && (
+                    <div className="flex gap-2">
+                      <button onClick={() => executeBulkModerate('rentals', selectedBulkRentals, 'approved')} className="bg-green-500/20 text-green-400 px-3 py-1.5 rounded-lg text-sm border border-green-500/30 font-medium">Approve Selected ({selectedBulkRentals.length})</button>
+                      <button onClick={() => executeBulkModerate('rentals', selectedBulkRentals, 'rejected')} className="bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg text-sm border border-red-500/30 font-medium">Reject Selected</button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex mb-4 items-center gap-2 cursor-pointer text-gray-400 text-sm" onClick={() => setSelectedBulkRentals(selectedBulkRentals.length === pendingRentals.length ? [] : pendingRentals.map(r => r._id))}>
+                   {selectedBulkRentals.length === pendingRentals.length && pendingRentals.length > 0 ? <CheckSquare className="w-5 h-5"/> : <Square className="w-5 h-5"/>} Select All
+                </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                   {pendingRentals.map((rental) => (
-                    <div key={rental._id} className="group relative bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-xl rounded-2xl p-6 border border-gray-700/50 hover:border-blue-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/10">
+                    <div key={rental._id} className={`group relative bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-xl rounded-2xl p-6 border transition-all duration-300 hover:shadow-2xl ${Number(rental.dailyRate) > 100000 ? 'border-red-500/50 shadow-red-500/10' : 'border-gray-700/50 hover:border-blue-500/50 hover:shadow-blue-500/10'}`}>
+                      <div className="absolute top-4 right-4 z-10 cursor-pointer text-gray-400 hover:text-white" onClick={() => setSelectedBulkRentals(prev => prev.includes(rental._id) ? prev.filter(id => id !== rental._id) : [...prev, rental._id])}>
+                        {selectedBulkRentals.includes(rental._id) ? <CheckSquare className="w-6 h-6 text-blue-500" /> : <Square className="w-6 h-6" />}
+                      </div>
                       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       <div className="relative">
                         <h3 className="text-xl font-semibold text-white mb-2">{rental.title}</h3>
@@ -794,15 +859,29 @@ const AdminDashboard = () => {
 
               {/* Pending Tasks */}
               <div>
-                <h2 className="text-2xl font-semibold text-white mb-4 flex items-center gap-2">
-                  <div className="p-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-xl">
-                    <Briefcase className="w-5 h-5 text-purple-400" />
-                  </div>
-                  Pending Tasks ({pendingTasks.length})
-                </h2>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-2xl font-semibold text-white flex items-center gap-2">
+                    <div className="p-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-xl">
+                      <Briefcase className="w-5 h-5 text-purple-400" />
+                    </div>
+                    Pending Tasks ({pendingTasks.length})
+                  </h2>
+                  {selectedBulkTasks.length > 0 && (
+                    <div className="flex gap-2">
+                      <button onClick={() => executeBulkModerate('tasks', selectedBulkTasks, 'approved')} className="bg-green-500/20 text-green-400 px-3 py-1.5 rounded-lg text-sm border border-green-500/30 font-medium">Approve Selected ({selectedBulkTasks.length})</button>
+                      <button onClick={() => executeBulkModerate('tasks', selectedBulkTasks, 'rejected')} className="bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg text-sm border border-red-500/30 font-medium">Reject Selected</button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex mb-4 items-center gap-2 cursor-pointer text-gray-400 text-sm" onClick={() => setSelectedBulkTasks(selectedBulkTasks.length === pendingTasks.length ? [] : pendingTasks.map(t => t._id))}>
+                   {selectedBulkTasks.length === pendingTasks.length && pendingTasks.length > 0 ? <CheckSquare className="w-5 h-5"/> : <Square className="w-5 h-5"/>} Select All
+                </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                   {pendingTasks.map((task) => (
                     <div key={task._id} className="group relative bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-xl rounded-2xl p-6 border border-gray-700/50 hover:border-purple-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/10">
+                      <div className="absolute top-4 right-4 z-10 cursor-pointer text-gray-400 hover:text-white" onClick={() => setSelectedBulkTasks(prev => prev.includes(task._id) ? prev.filter(id => id !== task._id) : [...prev, task._id])}>
+                        {selectedBulkTasks.includes(task._id) ? <CheckSquare className="w-6 h-6 text-purple-500" /> : <Square className="w-6 h-6" />}
+                      </div>
                       <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       <div className="relative">
                         <h3 className="text-xl font-semibold text-white mb-2 line-clamp-1">{task.description}</h3>
@@ -835,6 +914,11 @@ const AdminDashboard = () => {
           {/* ALL RENTALS TAB */}
           {activeTab === 'allRentals' && (
             <div className="space-y-4">
+              <div className="flex justify-end mb-4">
+                <button onClick={() => exportData('rentals')} className="flex items-center gap-2 px-4 py-2 bg-gray-800/80 border border-gray-700 hover:border-gray-500 rounded-xl text-white text-sm transition-all shadow-lg">
+                  <Download className="w-4 h-4" /> Export Rentals CSV
+                </button>
+              </div>
               {/* Filters Bar with Glass Effect */}
               <div className="bg-gradient-to-br from-gray-800/40 to-gray-900/40 backdrop-blur-xl rounded-2xl p-5 border border-gray-700/50">
                 <div className="flex flex-wrap gap-4 items-center">
@@ -944,6 +1028,11 @@ const AdminDashboard = () => {
           {/* ALL TASKS TAB */}
           {activeTab === 'allTasks' && (
             <div className="space-y-4">
+              <div className="flex justify-end mb-4">
+                <button onClick={() => exportData('tasks')} className="flex items-center gap-2 px-4 py-2 bg-gray-800/80 border border-gray-700 hover:border-gray-500 rounded-xl text-white text-sm transition-all shadow-lg">
+                  <Download className="w-4 h-4" /> Export Tasks CSV
+                </button>
+              </div>
               <div className="bg-gradient-to-br from-gray-800/40 to-gray-900/40 backdrop-blur-xl rounded-2xl p-5 border border-gray-700/50">
                 <div className="flex flex-wrap gap-4 items-center">
                   <div className="flex-1 min-w-[200px] relative">
@@ -1046,10 +1135,21 @@ const AdminDashboard = () => {
 
           {/* USERS TAB */}
           {activeTab === 'users' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {users.map((targetUser) => (
-                <div key={targetUser._id} className="group relative bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-xl rounded-2xl p-6 border border-gray-700/50 hover:border-blue-500/50 transition-all duration-300 hover:shadow-xl">
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div>
+              <div className="flex justify-end mb-4">
+                <button onClick={() => exportData('users')} className="flex items-center gap-2 px-4 py-2 bg-gray-800/80 border border-gray-700 hover:border-gray-500 rounded-xl text-white text-sm transition-all shadow-lg">
+                  <Download className="w-4 h-4" /> Export Users CSV
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {users.map((targetUser) => (
+                  <div key={targetUser._id} className="group relative bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-xl rounded-2xl p-6 border border-gray-700/50 hover:border-blue-500/50 transition-all duration-300 hover:shadow-xl">
+                    <div className="absolute top-4 right-4 z-10">
+                      <button onClick={() => setSelectedUserForProfile(targetUser)} className="p-2 bg-gray-900/80 border border-gray-700 hover:border-blue-500 rounded-lg text-gray-400 hover:text-blue-400 transition-all" title="View Details">
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                   <div className="relative">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
@@ -1096,6 +1196,7 @@ const AdminDashboard = () => {
                   </div>
                 </div>
               ))}
+            </div>
             </div>
           )}
 
@@ -1488,8 +1589,26 @@ const AdminDashboard = () => {
               )}
             </div>
           )}
+
+          {/* DISPUTES TAB */}
+          {activeTab === 'disputes' && (
+            <DisputesTab authHeaders={authHeaders} pushToast={pushToast} />
+          )}
+
+          {/* SETTINGS TAB */}
+          {activeTab === 'settings' && (
+            <SystemSettingsTab authHeaders={authHeaders} pushToast={pushToast} />
+          )}
         </div>
       </div>
+
+      {/* User Profile Drawer */}
+      <UserProfileDrawer 
+        user={selectedUserForProfile} 
+        onClose={() => setSelectedUserForProfile(null)} 
+        authHeaders={authHeaders} 
+        pushToast={pushToast} 
+      />
 
       {/* Drawers with Glass Effect */}
       {drawerMode && (

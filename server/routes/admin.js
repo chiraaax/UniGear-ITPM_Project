@@ -652,4 +652,157 @@ router.get('/queue-stats', async (req, res, next) => {
   }
 });
 
+router.patch('/rentals/bulk-moderate', async (req, res, next) => {
+  try {
+    const { ids, moderationStatus } = req.body;
+    if (!['approved', 'rejected'].includes(moderationStatus) || !Array.isArray(ids)) return res.status(400).json({ message: 'Invalid payload' });
+    await Item.updateMany({ _id: { $in: ids } }, { $set: { moderationStatus, moderatedBy: req.user._id, moderatedAt: new Date() } });
+    await writeAuditLog({ adminId: req.user._id, action: `bulk_rental_${moderationStatus}`, targetType: 'rental', targetId: ids[0], details: { count: ids.length, ids } });
+    res.json({ message: `Successfully ${moderationStatus} ${ids.length} rentals` });
+  } catch (err) { next(err); }
+});
+
+router.patch('/tasks/bulk-moderate', async (req, res, next) => {
+  try {
+    const { ids, moderationStatus } = req.body;
+    if (!['approved', 'rejected'].includes(moderationStatus) || !Array.isArray(ids)) return res.status(400).json({ message: 'Invalid payload' });
+    await Task.updateMany({ _id: { $in: ids } }, { $set: { moderationStatus, moderatedBy: req.user._id, moderatedAt: new Date() } });
+    await writeAuditLog({ adminId: req.user._id, action: `bulk_task_${moderationStatus}`, targetType: 'task', targetId: ids[0], details: { count: ids.length, ids } });
+    res.json({ message: `Successfully ${moderationStatus} ${ids.length} tasks` });
+  } catch (err) { next(err); }
+});
+
+router.post('/users/:id/warn', async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    user.warnings = (user.warnings || 0) + 1;
+    await user.save();
+    await writeAuditLog({ adminId: req.user._id, action: 'user_warned', targetType: 'user', targetId: user._id, details: { warningCount: user.warnings } });
+    res.json({ message: 'User warned successfully', warnings: user.warnings });
+  } catch (err) { next(err); }
+});
+
+router.post('/users/:id/message', async (req, res, next) => {
+  try {
+    const { message } = req.body;
+    if (!message) return res.status(400).json({ message: 'Message cannot be empty' });
+    await writeAuditLog({ adminId: req.user._id, action: 'user_messaged', targetType: 'user', targetId: req.params.id, details: { message } });
+    res.json({ message: 'Message sent successfully' });
+  } catch (err) { next(err); }
+});
+
+router.get('/users/:id/details', async (req, res, next) => {
+  try {
+    const [rentals, tasks] = await Promise.all([
+      Item.find({ owner: req.params.id }).sort({ createdAt: -1 }),
+      Task.find({ creator: req.params.id }).sort({ createdAt: -1 })
+    ]);
+    res.json({ rentals, tasks });
+  } catch (err) { next(err); }
+});
+
+const SystemSettings = require('../models/SystemSettings');
+router.get('/settings', async (req, res, next) => {
+  try {
+    let settings = await SystemSettings.findOne();
+    if (!settings) settings = await SystemSettings.create({});
+    res.json(settings);
+  } catch (err) { next(err); }
+});
+
+router.put('/settings', async (req, res, next) => {
+  try {
+    const settings = await SystemSettings.findOneAndUpdate({}, req.body, { new: true, upsert: true });
+    await writeAuditLog({ adminId: req.user._id, action: 'settings_updated', targetType: 'systemSettings' });
+    res.json(settings);
+  } catch (err) { next(err); }
+});
+
+const Dispute = require('../models/Dispute');
+router.get('/disputes', async (req, res, next) => {
+  try {
+    const disputes = await Dispute.find().populate('reporter reportedUser', 'name email').populate('messages.sender', 'name').sort({ createdAt: -1 });
+    res.json(disputes);
+  } catch (err) { next(err); }
+});
+
+router.patch('/disputes/:id/resolve', async (req, res, next) => {
+  try {
+    const dispute = await Dispute.findById(req.params.id);
+    if (!dispute) return res.status(404).json({ message: 'Dispute not found' });
+    dispute.status = req.body.status;
+    dispute.resolutionNote = req.body.resolutionNote;
+    await dispute.save();
+    await writeAuditLog({ adminId: req.user._id, action: 'dispute_resolved', targetType: 'dispute', targetId: dispute._id });
+    res.json(dispute);
+  } catch (err) { next(err); }
+});
+
+router.post('/disputes/:id/message', async (req, res, next) => {
+  try {
+    const { content } = req.body;
+    if (!content || !content.trim()) return res.status(400).json({ message: 'Message cannot be empty' });
+    
+    const dispute = await Dispute.findById(req.params.id);
+    if (!dispute) return res.status(404).json({ message: 'Dispute not found' });
+    
+    dispute.messages.push({
+      sender: req.user._id,
+      isAdmin: true,
+      content: content.trim()
+    });
+    
+    await dispute.save();
+    await dispute.populate('reporter reportedUser', 'name email');
+    await dispute.populate('messages.sender', 'name');
+    
+    res.status(201).json(dispute);
+  } catch (err) { next(err); }
+});
+
+router.get('/rentals/export', async (req, res, next) => {
+  try {
+    const rentals = await Item.find().populate('owner', 'name email').sort({ createdAt: -1 });
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="rentals-export.csv"');
+    const header = ['ID', 'Title', 'Category', 'Daily Rate', 'Status', 'Owner Name', 'Owner Email', 'Created At'];
+    const rows = rentals.map(r => [
+      r._id, `"${r.title}"`, `"${r.category}"`, r.dailyRate, r.moderationStatus,
+      `"${r.owner?.name || ''}"`, `"${r.owner?.email || ''}"`, r.createdAt
+    ]);
+    const csv = [header.join(',')].concat(rows.map(r => r.join(','))).join('\n');
+    res.status(200).send(csv);
+  } catch (err) { next(err); }
+});
+
+router.get('/tasks/export', async (req, res, next) => {
+  try {
+    const tasks = await Task.find().populate('creator', 'name email').sort({ createdAt: -1 });
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="tasks-export.csv"');
+    const header = ['ID', 'Description', 'Category', 'Budget', 'Status', 'Creator Name', 'Creator Email', 'Created At'];
+    const rows = tasks.map(t => [
+      t._id, `"${t.description.replace(/"/g, '""')}"`, `"${t.category}"`, t.budget, t.moderationStatus,
+      `"${t.creator?.name || ''}"`, `"${t.creator?.email || ''}"`, t.createdAt
+    ]);
+    const csv = [header.join(',')].concat(rows.map(r => r.join(','))).join('\n');
+    res.status(200).send(csv);
+  } catch (err) { next(err); }
+});
+
+router.get('/users/export', async (req, res, next) => {
+  try {
+    const users = await User.find().sort({ createdAt: -1 });
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="users-export.csv"');
+    const header = ['ID', 'Name', 'Email', 'Role', 'Verified', 'Suspended', 'Warnings', 'Created At'];
+    const rows = users.map(u => [
+      u._id, `"${u.name}"`, `"${u.email}"`, u.role, u.isVerified, u.isSuspended, u.warnings || 0, u.createdAt
+    ]);
+    const csv = [header.join(',')].concat(rows.map(r => r.join(','))).join('\n');
+    res.status(200).send(csv);
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
