@@ -10,6 +10,19 @@ import {
   User,
   Pencil,
   Trash2,
+  Search,
+  SlidersHorizontal,
+  CalendarDays,
+  Eye,
+  BadgeDollarSign,
+  ShieldCheck,
+  ImagePlus,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Package,
+  Star,
+  Clock3,
 } from "lucide-react";
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000/api";
@@ -35,27 +48,22 @@ const RentalPage = () => {
   const [toastMessage, setToastMessage] = useState("");
   const [showModal, setShowModal] = useState(false);
 
-  // NEW STATES
   const [categoryFilter, setCategoryFilter] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [editingItem, setEditingItem] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // CALENDAR AVAILABILITY STATE
   const [availability, setAvailability] = useState({});
   const [selectedCalendarItem, setSelectedCalendarItem] = useState(null);
 
-  // ITEM DETAIL MODAL STATE
   const [selectedItem, setSelectedItem] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  // IMAGE UPLOAD STATES
   const [images, setImages] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
   const [existingImages, setExistingImages] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Helper function to format date for input
   const formatDateForInput = (dateString) => {
     if (!dateString) return "";
     try {
@@ -66,7 +74,6 @@ const RentalPage = () => {
     }
   };
 
-  // Helper function to get today's date with time reset
   const getTodayDate = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -79,7 +86,6 @@ const RentalPage = () => {
       const data = await res.json();
       setItems(data);
 
-      // fetch availability for each item
       data.forEach((item) => {
         fetchAvailability(item._id);
       });
@@ -92,16 +98,13 @@ const RentalPage = () => {
     fetchItems();
   }, []);
 
-  // Filter and search items
   useEffect(() => {
     let filtered = [...items];
 
-    // Apply category filter
     if (categoryFilter) {
       filtered = filtered.filter((item) => item.category === categoryFilter);
     }
 
-    // Apply search filter
     if (searchTerm) {
       filtered = filtered.filter(
         (item) =>
@@ -111,10 +114,9 @@ const RentalPage = () => {
     }
 
     setFilteredItems(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
+    setCurrentPage(1);
   }, [items, categoryFilter, searchTerm]);
 
-  // FETCH AVAILABILITY
   const fetchAvailability = async (itemId) => {
     try {
       const res = await fetch(
@@ -131,7 +133,6 @@ const RentalPage = () => {
     }
   };
 
-  // CHECK IF DATE IS BOOKED (timezone fix)
   const formatLocalDate = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -141,13 +142,11 @@ const RentalPage = () => {
 
   const isDateBooked = (itemId, date) => {
     const bookings = availability[itemId] || [];
-
     const check = formatLocalDate(date);
 
     return bookings.some((b) => {
       const start = formatLocalDate(new Date(b.startDate));
       const end = formatLocalDate(new Date(b.endDate));
-
       return check >= start && check <= end;
     });
   };
@@ -157,7 +156,6 @@ const RentalPage = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  // RESET FORM FUNCTION
   const resetForm = () => {
     setForm({
       title: "",
@@ -171,19 +169,16 @@ const RentalPage = () => {
     setEditingItem(null);
   };
 
-  // HANDLE ADD NEW ITEM
   const handleAddNewItem = () => {
-    resetForm(); // Reset everything before opening
+    resetForm();
     setShowModal(true);
   };
 
-  // HANDLE CLOSE MODAL
   const handleCloseModal = () => {
     resetForm();
     setShowModal(false);
   };
 
-  // ENHANCED IMAGE HANDLERS WITH DRAG & DROP
   const handleDragOver = (e) => {
     e.preventDefault();
     setIsDragging(true);
@@ -240,12 +235,10 @@ const RentalPage = () => {
       setImages(newImages);
       setPreviewUrls(newPreviews);
 
-      // Clean up object URLs to prevent memory leaks
       URL.revokeObjectURL(previewUrls[index]);
     }
   };
 
-  // S3 UPLOAD FUNCTION
   const uploadImagesToS3 = async () => {
     const uploadedUrls = [];
 
@@ -273,7 +266,6 @@ const RentalPage = () => {
     return uploadedUrls;
   };
 
-  // UPDATED EDIT HANDLER - loads existing images
   const handleEdit = (item) => {
     setEditingItem(item._id);
     setForm({
@@ -288,19 +280,16 @@ const RentalPage = () => {
     setShowModal(true);
   };
 
-  // HANDLE VIEW ITEM DETAILS
   const handleViewDetails = (item) => {
     setSelectedItem(item);
     setShowDetailModal(true);
   };
 
-  // HANDLE CLOSE DETAIL MODAL
   const handleCloseDetailModal = () => {
     setSelectedItem(null);
     setShowDetailModal(false);
   };
 
-  // DELETE HANDLER
   const handleDelete = async (itemId) => {
     if (!window.confirm("Are you sure you want to delete this item?")) return;
 
@@ -336,7 +325,6 @@ const RentalPage = () => {
     }));
   };
 
-  // UPDATED HANDLE BOOKING WITH DATE VALIDATION
   const handleBooking = async (itemId) => {
     if (!token) {
       alert("Please login first");
@@ -351,7 +339,6 @@ const RentalPage = () => {
       return;
     }
 
-    // Validate dates
     const today = getTodayDate();
     const startDate = new Date(data.startDate);
     const endDate = new Date(data.endDate);
@@ -405,7 +392,6 @@ const RentalPage = () => {
     }
   };
 
-  // UPDATED SUBMIT HANDLER - merges existing and new images
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -416,14 +402,12 @@ const RentalPage = () => {
     }
 
     try {
-      // UPLOAD NEW IMAGES TO S3
       let uploadedUrls = [];
 
       if (images.length > 0) {
         uploadedUrls = await uploadImagesToS3();
       }
 
-      // MERGE EXISTING + NEW IMAGES
       const finalPhotos = [...existingImages, ...uploadedUrls];
 
       const url = editingItem
@@ -451,21 +435,19 @@ const RentalPage = () => {
         return;
       }
 
-      // Reset form and close modal
       resetForm();
       setShowModal(false);
       fetchItems();
       showToast(
         editingItem
           ? "✓ Item updated successfully!"
-          : "✓ Item added successfully!"
+          : "✓ Item added successfully!",
       );
     } catch (err) {
       console.error(err);
     }
   };
 
-  // UPDATED CALCULATE DAYS FUNCTION
   const calculateDays = (startDate, endDate) => {
     if (!startDate || !endDate) return null;
     const start = new Date(startDate);
@@ -477,20 +459,19 @@ const RentalPage = () => {
     const diffTime = Math.abs(end - start);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    // If same day, return 1 day
     return diffDays === 0 ? 1 : diffDays;
   };
 
   const getCategoryIcon = (category) => {
     switch (category) {
       case "Electronics":
-        return "⚡";
+        return <Package size={18} />;
       case "Lab Gear":
-        return "🔬";
+        return <ShieldCheck size={18} />;
       case "Sports":
-        return "⚽";
+        return <Clock3 size={18} />;
       default:
-        return "📦";
+        return <Package size={18} />;
     }
   };
 
@@ -499,7 +480,6 @@ const RentalPage = () => {
     setTimeout(() => setToastMessage(""), 3000);
   };
 
-  // Pagination
   const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
@@ -510,7 +490,6 @@ const RentalPage = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Close modal on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (modalRef.current && !modalRef.current.contains(event.target)) {
@@ -532,7 +511,6 @@ const RentalPage = () => {
     };
   }, [showModal]);
 
-  // Clean up object URLs on unmount
   useEffect(() => {
     return () => {
       previewUrls.forEach((url) => URL.revokeObjectURL(url));
@@ -541,17 +519,11 @@ const RentalPage = () => {
 
   return (
     <div className="rental-page-container">
-      {toastMessage && (
-        <div className="success-toast">
-          {toastMessage}
-        </div>
-      )}
+      {toastMessage && <div className="success-toast">{toastMessage}</div>}
 
       <div className="page-header">
         <div>
-          <h1 className="page-title">
-            UniGear Rental System
-          </h1>
+          <h1 className="page-title">UniGear Rental System</h1>
           <p className="page-description">
             Browse and rent gear from fellow students
           </p>
@@ -562,9 +534,9 @@ const RentalPage = () => {
         </button>
       </div>
 
-      {/* Search and Filter Bar */}
       <div className="search-filter-bar">
         <div className="search-box">
+          <Search size={18} className="input-icon" />
           <input
             type="text"
             placeholder="Search items by title or description..."
@@ -573,7 +545,9 @@ const RentalPage = () => {
             className="search-input"
           />
         </div>
-        <div className="filter-box">
+
+        <div className="filter-box filter-box-icon">
+          <SlidersHorizontal size={18} className="filter-icon" />
           <select
             className="filter-select"
             value={categoryFilter}
@@ -588,7 +562,6 @@ const RentalPage = () => {
         </div>
       </div>
 
-      {/* Items Grid */}
       <div className="items-grid">
         {currentItems.map((item) => {
           const bookingInfo = bookingData[item._id];
@@ -603,11 +576,10 @@ const RentalPage = () => {
           return (
             <div key={item._id} className="item-card">
               <div className="card-badge">{item.category}</div>
+
               <div className="card-header">
                 <div className="item-title-section">
-                  <span className="item-icon">
-                    {getCategoryIcon(item.category)}
-                  </span>
+                  <span className="item-icon">{getCategoryIcon(item.category)}</span>
                   <h3>{item.title}</h3>
                 </div>
               </div>
@@ -616,11 +588,9 @@ const RentalPage = () => {
                 <p className="item-description">{item.description}</p>
               )}
 
-              {/* 🔥 DYNAMIC IMAGE DISPLAY - SINGLE VS MULTIPLE */}
               {item.photos && item.photos.length > 0 && (
                 <>
                   {item.photos.length === 1 ? (
-                    // Single image - centered larger thumbnail
                     <div className="single-image-container">
                       <img
                         src={item.photos[0]}
@@ -630,7 +600,6 @@ const RentalPage = () => {
                       />
                     </div>
                   ) : (
-                    // Multiple images - grid layout
                     <div className="thumbnail-gallery">
                       {item.photos.slice(0, 3).map((img, i) => (
                         <div key={i} className="thumbnail-item">
@@ -654,6 +623,7 @@ const RentalPage = () => {
 
               <div className="price-section">
                 <div className="daily-rate">
+                  <BadgeDollarSign size={18} className="price-icon" />
                   <span className="currency">LKR</span>
                   <span className="rate">{item.dailyRate}</span>
                   <span className="period">/day</span>
@@ -668,27 +638,25 @@ const RentalPage = () => {
                   <div className="owner-details">
                     <span className="owner-name">{item.owner.name}</span>
                     <div className="trust-score">
-                      <span>⭐</span>
+                      <Star size={14} />
                       <span>Trust {item.owner.trustScore?.toFixed(1)}</span>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Ratings Summary */}
               <div className="ratings-summary-section">
                 <RatingsSummary itemId={item._id} />
               </div>
 
-              {/* View Details Button */}
               <button
                 onClick={() => handleViewDetails(item)}
                 className="view-details-button"
               >
-                ⭐ Rates and Feedback
+                <Eye size={16} />
+                Rates and Feedback
               </button>
 
-              {/* Calendar Toggle */}
               <div className="calendar-section">
                 <button
                   className="calendar-toggle"
@@ -698,12 +666,12 @@ const RentalPage = () => {
                     )
                   }
                 >
-                  📅 {selectedCalendarItem?._id === item._id ? "Hide" : "View"}{" "}
+                  <CalendarDays size={16} />
+                  {selectedCalendarItem?._id === item._id ? "Hide" : "View"}{" "}
                   Availability
                 </button>
               </div>
 
-              {/* UPDATED CALENDAR WITH TODAY DATE FIX */}
               {selectedCalendarItem?._id === item._id && (
                 <div className="calendar-popup">
                   <Calendar
@@ -718,11 +686,10 @@ const RentalPage = () => {
                     minDate={getTodayDate()}
                     defaultActiveStartDate={getTodayDate()}
                   />
-                  <p className="calendar-legend">🔴 Booked dates</p>
+                  <p className="calendar-legend">Booked dates are highlighted in red</p>
                 </div>
               )}
 
-              {/* Owner Controls */}
               {isOwner && (
                 <div className="owner-controls">
                   <button
@@ -742,7 +709,6 @@ const RentalPage = () => {
                 </div>
               )}
 
-              {/* Booking Section */}
               {!isOwner && (
                 <div className="booking-section">
                   <div className="date-inputs">
@@ -771,10 +737,14 @@ const RentalPage = () => {
 
                   {days && totalPrice && (
                     <div className="price-summary">
-                      <span>
-                        📆 {days} day{days !== 1 ? "s" : ""}
+                      <span className="summary-chip">
+                        <CalendarDays size={14} />
+                        {days} day{days !== 1 ? "s" : ""}
                       </span>
-                      <span className="total">💰 LKR {totalPrice}</span>
+                      <span className="total">
+                        <BadgeDollarSign size={14} />
+                        LKR {totalPrice}
+                      </span>
                     </div>
                   )}
 
@@ -789,7 +759,10 @@ const RentalPage = () => {
                         Processing...
                       </>
                     ) : (
-                      "📖 Book Now"
+                      <>
+                        <CalendarDays size={16} />
+                        Book Now
+                      </>
                     )}
                   </button>
                 </div>
@@ -801,7 +774,7 @@ const RentalPage = () => {
 
       {filteredItems.length === 0 && (
         <div className="empty-state">
-          <div className="empty-icon">📭</div>
+          <Package size={52} className="empty-state-icon" />
           <p>No items found</p>
           <p className="empty-subtitle">
             Try adjusting your search or filter criteria
@@ -809,7 +782,6 @@ const RentalPage = () => {
         </div>
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="pagination">
           <button
@@ -817,7 +789,8 @@ const RentalPage = () => {
             disabled={currentPage === 1}
             className="page-btn"
           >
-            ← Previous
+            <ChevronLeft size={16} />
+            Previous
           </button>
           <div className="page-numbers">
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
@@ -835,19 +808,19 @@ const RentalPage = () => {
             disabled={currentPage === totalPages}
             className="page-btn"
           >
-            Next →
+            Next
+            <ChevronRight size={16} />
           </button>
         </div>
       )}
 
-      {/* Modal for Add/Edit Item */}
       {showModal && (
         <div className="modal-overlay">
           <div className="modal-content" ref={modalRef}>
             <div className="modal-header">
               <h2>{editingItem ? "Edit Item" : "Add New Item"}</h2>
               <button className="close-modal" onClick={handleCloseModal}>
-                ✕
+                <X size={20} />
               </button>
             </div>
 
@@ -898,7 +871,6 @@ const RentalPage = () => {
                 />
               </label>
 
-              {/* Drag & Drop Image Upload */}
               <div className="image-upload-section">
                 <label>Upload Images (Max 3)</label>
                 <div
@@ -909,7 +881,7 @@ const RentalPage = () => {
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <div className="drag-drop-content">
-                    <span className="upload-icon">📸</span>
+                    <ImagePlus size={34} className="upload-icon-svg" />
                     <p>Drag & drop images here or click to select</p>
                     <span className="upload-hint">
                       Supports: JPG, PNG, GIF (Max 5MB each)
@@ -937,7 +909,7 @@ const RentalPage = () => {
                             className="remove-image-btn"
                             onClick={() => removeImage(index, true)}
                           >
-                            ×
+                            <X size={12} />
                           </button>
                         </div>
                       ))}
@@ -957,7 +929,7 @@ const RentalPage = () => {
                             className="remove-image-btn"
                             onClick={() => removeImage(index, false)}
                           >
-                            ×
+                            <X size={12} />
                           </button>
                         </div>
                       ))}
@@ -983,7 +955,6 @@ const RentalPage = () => {
         </div>
       )}
 
-      {/* Item Detail Modal with Ratings */}
       <ItemDetailModal
         item={selectedItem}
         isOpen={showDetailModal}
@@ -1001,7 +972,6 @@ const RentalPage = () => {
           max-width: 1100px;
           margin: 0 auto;
           padding: 2rem;
-          background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
           min-height: 100vh;
         }
 
@@ -1048,7 +1018,7 @@ const RentalPage = () => {
 
         .page-header h1 {
           font-size: 2rem;
-          font-weight: semibold;
+          font-weight: 700;
           background: linear-gradient(135deg, #fff, #a5f3fc);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
@@ -1091,9 +1061,18 @@ const RentalPage = () => {
           position: relative;
         }
 
+        .input-icon {
+          position: absolute;
+          left: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #94a3b8;
+          pointer-events: none;
+        }
+
         .search-input {
           width: 100%;
-          padding: 0.75rem 1rem 0.75rem 1.2rem;
+          padding: 0.75rem 1rem 0.75rem 2.7rem;
           border-radius: 0.75rem;
           border: 1px solid rgba(148, 163, 184, 0.3);
           background: rgba(15, 23, 42, 0.8);
@@ -1109,18 +1088,33 @@ const RentalPage = () => {
         }
 
         .filter-box {
-          min-width: 200px;
+          min-width: 220px;
+        }
+
+        .filter-box-icon {
+          position: relative;
+        }
+
+        .filter-icon {
+          position: absolute;
+          left: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #94a3b8;
+          pointer-events: none;
+          z-index: 1;
         }
 
         .filter-select {
           width: 100%;
-          padding: 0.75rem 1rem;
+          padding: 0.75rem 1rem 0.75rem 2.7rem;
           border-radius: 0.75rem;
           border: 1px solid rgba(148, 163, 184, 0.3);
           background: rgba(15, 23, 42, 0.8);
           color: #e5e7eb;
           font-size: 0.9rem;
           cursor: pointer;
+          appearance: none;
         }
 
         .items-grid {
@@ -1131,7 +1125,7 @@ const RentalPage = () => {
         }
 
         .item-card {
-          background: radial-gradient(circle at top left, rgba(30, 64, 175, 0.3), rgba(15, 23, 42, 0.98));
+          background: radial-gradient(circle at top left, rgba(3, 35, 139, 0.3), rgba(15, 23, 42, 0.98));
           border-radius: 1rem;
           padding: 1.25rem;
           border: 1px solid rgba(148, 163, 184, 0.3);
@@ -1166,11 +1160,20 @@ const RentalPage = () => {
         .item-title-section {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
+          gap: 0.65rem;
         }
 
         .item-icon {
           font-size: 1.5rem;
+          color: #93c5fd;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 34px;
+          height: 34px;
+          border-radius: 10px;
+          background: rgba(59, 130, 246, 0.14);
+          border: 1px solid rgba(96, 165, 250, 0.2);
         }
 
         .item-card h3 {
@@ -1191,7 +1194,6 @@ const RentalPage = () => {
           overflow: hidden;
         }
 
-        /* 🔥 SINGLE IMAGE STYLES */
         .single-image-container {
           margin-bottom: 1rem;
           display: flex;
@@ -1213,7 +1215,6 @@ const RentalPage = () => {
           transform: scale(1.02);
         }
 
-        /* MULTIPLE IMAGES GRID */
         .thumbnail-gallery {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
@@ -1255,15 +1256,19 @@ const RentalPage = () => {
 
         .price-section {
           margin-bottom: 1rem;
-          padding: 0.5rem 0;
+          padding: 0.65rem 0;
           border-top: 1px solid rgba(148, 163, 184, 0.2);
           border-bottom: 1px solid rgba(148, 163, 184, 0.2);
         }
 
         .daily-rate {
           display: flex;
-          align-items: baseline;
-          gap: 0.25rem;
+          align-items: center;
+          gap: 0.35rem;
+        }
+
+        .price-icon {
+          color: #60a5fa;
         }
 
         .currency {
@@ -1299,7 +1304,6 @@ const RentalPage = () => {
           width: 32px;
           height: 32px;
           background: linear-gradient(135deg, #776cdb, #2e1ae1);
-
           border-radius: 50%;
           display: flex;
           align-items: center;
@@ -1323,7 +1327,7 @@ const RentalPage = () => {
         .trust-score {
           display: flex;
           align-items: center;
-          gap: 0.25rem;
+          gap: 0.3rem;
           font-size: 0.7rem;
           color: #fbbf24;
         }
@@ -1335,7 +1339,7 @@ const RentalPage = () => {
 
         .view-details-button {
           width: 100%;
-          padding: 0.6rem;
+          padding: 0.7rem;
           margin-bottom: 0.75rem;
           border-radius: 0.75rem;
           border: 1px solid rgba(96, 165, 250, 0.4);
@@ -1345,6 +1349,10 @@ const RentalPage = () => {
           cursor: pointer;
           transition: all 0.2s ease;
           font-size: 0.9rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.45rem;
         }
 
         .view-details-button:hover {
@@ -1360,7 +1368,7 @@ const RentalPage = () => {
 
         .calendar-toggle {
           width: 100%;
-          padding: 0.5rem;
+          padding: 0.65rem;
           border-radius: 0.75rem;
           border: 1px solid rgba(96, 165, 250, 0.4);
           background: rgba(15, 23, 42, 0.5);
@@ -1369,6 +1377,10 @@ const RentalPage = () => {
           font-weight: 500;
           cursor: pointer;
           transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.45rem;
         }
 
         .calendar-toggle:hover {
@@ -1519,9 +1531,10 @@ const RentalPage = () => {
           margin-bottom: 1rem;
         }
 
-        .edit-button, .delete-button {
+        .edit-button,
+        .delete-button {
           flex: 1;
-          padding: 0.5rem;
+          padding: 0.6rem;
           border-radius: 0.75rem;
           border: none;
           font-size: 0.8rem;
@@ -1578,11 +1591,20 @@ const RentalPage = () => {
         .price-summary {
           display: flex;
           justify-content: space-between;
+          align-items: center;
           background: rgba(34, 197, 94, 0.1);
-          padding: 0.5rem;
+          padding: 0.55rem 0.65rem;
           border-radius: 0.75rem;
           margin-bottom: 0.75rem;
           font-size: 0.8rem;
+          gap: 0.5rem;
+        }
+
+        .summary-chip,
+        .total {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
         }
 
         .total {
@@ -1592,15 +1614,19 @@ const RentalPage = () => {
 
         .book-button {
           width: 100%;
-          padding: 0.6rem;
+          padding: 0.7rem;
           border-radius: 999px;
           border: none;
-          background: linear-gradient(135deg,  #6959f6, #10094f);
+          background: linear-gradient(135deg, #6959f6, #10094f);
           color: white;
           font-weight: 600;
           font-size: 0.85rem;
           cursor: pointer;
           transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.45rem;
         }
 
         .book-button:hover:not(:disabled) {
@@ -1619,7 +1645,9 @@ const RentalPage = () => {
         }
 
         @keyframes spin {
-          to { transform: rotate(360deg); }
+          to {
+            transform: rotate(360deg);
+          }
         }
 
         .empty-state {
@@ -1627,11 +1655,17 @@ const RentalPage = () => {
           padding: 4rem;
           background: rgba(15, 23, 42, 0.5);
           border-radius: 1rem;
+          color: #e5e7eb;
         }
 
-        .empty-icon {
-          font-size: 4rem;
+        .empty-state-icon {
+          color: #64748b;
           margin-bottom: 1rem;
+        }
+
+        .empty-subtitle {
+          color: #94a3b8;
+          margin-top: 0.5rem;
         }
 
         .pagination {
@@ -1640,16 +1674,20 @@ const RentalPage = () => {
           align-items: center;
           gap: 1rem;
           margin-top: 2rem;
+          flex-wrap: wrap;
         }
 
         .page-btn {
-          padding: 0.5rem 1rem;
-          border-radius: 0.5rem;
+          padding: 0.6rem 1rem;
+          border-radius: 0.75rem;
           border: 1px solid rgba(148, 163, 184, 0.3);
           background: rgba(15, 23, 42, 0.8);
           color: #e5e7eb;
           cursor: pointer;
           transition: all 0.2s ease;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
         }
 
         .page-btn:hover:not(:disabled) {
@@ -1699,8 +1737,12 @@ const RentalPage = () => {
         }
 
         @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
         }
 
         .modal-content {
@@ -1739,16 +1781,22 @@ const RentalPage = () => {
         }
 
         .close-modal {
-          background: none;
-          border: none;
-          font-size: 1.5rem;
+          background: rgba(148, 163, 184, 0.1);
+          border: 1px solid rgba(148, 163, 184, 0.2);
+          width: 38px;
+          height: 38px;
+          border-radius: 10px;
           cursor: pointer;
           color: #94a3b8;
-          transition: color 0.2s ease;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .close-modal:hover {
           color: #ef4444;
+          background: rgba(239, 68, 68, 0.1);
         }
 
         .modal-form label {
@@ -1800,8 +1848,8 @@ const RentalPage = () => {
           gap: 0.5rem;
         }
 
-        .upload-icon {
-          font-size: 2.5rem;
+        .upload-icon-svg {
+          color: #60a5fa;
         }
 
         .upload-hint {
@@ -1849,8 +1897,6 @@ const RentalPage = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 14px;
-          font-weight: bold;
           transition: all 0.2s ease;
         }
 
@@ -1907,6 +1953,15 @@ const RentalPage = () => {
           }
 
           .search-filter-bar {
+            flex-direction: column;
+          }
+
+          .price-summary {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .modal-actions {
             flex-direction: column;
           }
         }
