@@ -127,6 +127,7 @@ const AdminDashboard = () => {
   const [selectedLogDetails, setSelectedLogDetails] = useState(null);
   const [dateRangePreset, setDateRangePreset] = useState('7d');
   const [showFilters, setShowFilters] = useState(true);
+  const [disputesCount, setDisputesCount] = useState(0);
 
   const [rentalForm, setRentalForm] = useState({
     title: '',
@@ -194,22 +195,24 @@ const AdminDashboard = () => {
   const loadAllData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [rentalsRes, tasksRes, usersRes, analyticsRes, queueRes, logsRes] = await Promise.all([
+      const [rentalsRes, tasksRes, usersRes, analyticsRes, queueRes, logsRes, disputesRes] = await Promise.all([
         fetch(`${API_BASE}/admin/rentals?moderationStatus=all`, { headers: authHeaders }),
         fetch(`${API_BASE}/admin/tasks?moderationStatus=all`, { headers: authHeaders }),
         fetch(`${API_BASE}/admin/users`, { headers: authHeaders }),
         fetch(`${API_BASE}/admin/analytics`, { headers: authHeaders }),
         fetch(`${API_BASE}/admin/queue-stats`, { headers: authHeaders }),
         fetch(`${API_BASE}/admin/audit-logs?page=1&limit=${DEFAULT_AUDIT_PAGE_SIZE}&includeStudentActions=true`, { headers: authHeaders }),
+        fetch(`${API_BASE}/admin/disputes`, { headers: authHeaders }),
       ]);
       
-      const [rentalsData, tasksData, usersData, analyticsData, queueData, logsData] = await Promise.all([
+      const [rentalsData, tasksData, usersData, analyticsData, queueData, logsData, disputesData] = await Promise.all([
         rentalsRes.json(),
         tasksRes.json(),
         usersRes.json(),
         analyticsRes.json(),
         queueRes.json(),
         logsRes.json(),
+        disputesRes.json(),
       ]);
       
       if (!rentalsRes.ok || !tasksRes.ok) {
@@ -227,6 +230,7 @@ const AdminDashboard = () => {
       setAuditStats(calculateAuditStats(logsData?.items || []));
       setAnalytics(analyticsData);
       setQueueStats(queueData);
+      setDisputesCount((Array.isArray(disputesData) ? disputesData : []).filter(d => d.status === 'pending').length);
       setError('');
     } catch (err) {
       console.error('Error loading data:', err);
@@ -235,6 +239,25 @@ const AdminDashboard = () => {
       setIsLoading(false);
     }
   }, [authHeaders]);
+
+  const deleteAuditLog = async (id, e) => {
+    e.stopPropagation(); // prevent expanding details
+    if (!window.confirm('Are you sure you want to permanently delete this audit log? This action cannot be undone.')) return;
+    try {
+      const res = await fetch(`${API_BASE}/admin/audit-logs/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+      if (!res.ok) throw new Error('Failed to delete audit log');
+      pushToast('success', 'Deleted', 'Audit log deleted successfully.');
+      
+      // Remove from UI manually to avoid full refetch
+      setAuditLogs(prev => prev.filter(log => log._id !== id));
+      setAuditTotal(prev => prev - 1);
+    } catch (err) {
+      pushToast('error', 'Error', err.message);
+    }
+  };
 
   // Apply filters to rentals
   useEffect(() => {
@@ -780,7 +803,7 @@ const AdminDashboard = () => {
               { id: 'allTasks', label: 'All Tasks', icon: Briefcase, count: allTasks.length },
               { id: 'users', label: 'Users', icon: Users, count: users.length },
               { id: 'audit', label: 'Audit Logs', icon: Shield, count: auditTotal },
-              { id: 'disputes', label: 'Disputes', icon: AlertTriangle, count: 0 },
+              { id: 'disputes', label: 'Disputes', icon: AlertTriangle, count: disputesCount },
               { id: 'settings', label: 'Settings', icon: Settings, count: 0 },
             ].map((tab) => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
@@ -1459,8 +1482,17 @@ const AdminDashboard = () => {
                             </div>
                           </div>
                         </div>
-                        <div className="text-xs text-blue-400 group-hover:text-blue-300 transition-colors">
-                          {selectedLogDetails === log._id ? 'Hide details ▲' : 'View details ▼'}
+                        <div className="flex items-center gap-4">
+                          <button 
+                            className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                            onClick={(e) => deleteAuditLog(log._id, e)}
+                            title="Delete Audit Log"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          <div className="text-xs text-blue-400 group-hover:text-blue-300 transition-colors">
+                            {selectedLogDetails === log._id ? 'Hide details ▲' : 'View details ▼'}
+                          </div>
                         </div>
                       </div>
                       
