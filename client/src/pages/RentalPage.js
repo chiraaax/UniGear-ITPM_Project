@@ -759,20 +759,27 @@ const RentalPage = () => {
                     </div>
                   )}
 
-                  <button
-                    onClick={() => handleBooking(item._id)}
-                    className={`book-button ${isBooking === item._id ? "booking" : ""}`}
-                    disabled={isBooking === item._id}
-                  >
-                    {isBooking === item._id ? (
-                      <>
-                        <span className="spinner"></span>
-                        Processing...
-                      </>
-                    ) : (
-                      "📖 Book Now"
-                    )}
-                  </button>
+                 <button
+  className={`mt-4 w-full flex items-center justify-center gap-2 
+             py-2 rounded-lg text-sm font-semibold text-white 
+             border border-#80A3A5
+             bg-gradient-to-r from-emerald-500 to-#80A3A5
+             hover:from-#80A3A5 hover:to-#80A3A5
+             transition transform hover:scale-105
+  book-button ${isBooking === item._id ? "booking" : ""}`}
+
+  onClick={() => handleBooking(item._id)}
+  disabled={isBooking === item._id}
+>
+  {isBooking === item._id ? (
+    <>
+      <span className="spinner"></span>
+      Processing...
+    </>
+  ) : (
+    "📖 Book Now"
+  )}
+</button>
                 </div>
               )}
             </div>

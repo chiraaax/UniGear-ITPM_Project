@@ -118,17 +118,17 @@ const TaskStatusDashboard = () => {
                 <p className="text-2xl">{taskStats.total}</p>
               </div>
 
-              <div className="bg-yellow-600 p-5 rounded-xl">
+              <div className="bg-yellow-900/20 p-5 rounded-xl border border-yellow-700/30">
                 <p>Pending</p>
                 <p className="text-2xl">{taskStats.pending}</p>
               </div>
 
-              <div className="bg-blue-600 p-5 rounded-xl">
+              <div className="bg-blue-900/20 p-5 rounded-xl border border-blue-700/30">
                 <p>In Progress</p>
                 <p className="text-2xl">{taskStats.inProgress}</p>
               </div>
 
-              <div className="bg-green-600 p-5 rounded-xl">
+              <div className="bg-green-900/20 p-5 rounded-xl border border-green-700/30">
                 <p>Completed</p>
                 <p className="text-2xl">{taskStats.completed}</p>
               </div>

@@ -243,13 +243,13 @@ const TaskStatusTracking = () => {
                 <h2 className="text-2xl font-semibold">Status Distribution</h2>
               </div>
 
-              {taskStats.total > 0 ? (
+              {/* {taskStats.total > 0 ? (
                 <div className="h-80 mb-10">
                   <Bar data={barData} options={barOptions} />
                 </div>
               ) : (
                 <p className="text-slate-400 mb-10">No status data available.</p>
-              )}
+              )} */}
 
               {[
                 {
