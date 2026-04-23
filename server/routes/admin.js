@@ -808,17 +808,30 @@ router.get('/disputes', async (req, res, next) => {
 
 router.patch('/disputes/:id/resolve', async (req, res, next) => {
   try {
+    const { status, resolutionNote = '' } = req.body;
+    if (!['resolved', 'dismissed'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid dispute status' });
+    }
+
     const dispute = await Dispute.findById(req.params.id);
     if (!dispute) return res.status(404).json({ message: 'Dispute not found' });
-    dispute.status = req.body.status;
-    dispute.resolutionNote = req.body.resolutionNote;
+    dispute.status = status;
+    dispute.resolutionNote = resolutionNote;
     await dispute.save();
-    await writeAuditLog({
-      adminId: req.user._id,
-      action: 'dispute_resolved',
-      targetType: 'dispute',
-      targetId: dispute._id,
-    });
+
+    // Resolution should succeed even if audit logging has schema/data issues.
+    try {
+      await writeAuditLog({
+        adminId: req.user._id,
+        action: status === 'dismissed' ? 'dispute_dismissed' : 'dispute_resolved',
+        targetType: 'dispute',
+        targetId: dispute._id,
+        details: { resolutionNote },
+      });
+    } catch (auditErr) {
+      console.error('Audit log failed for dispute resolution:', auditErr);
+    }
+
     res.json(dispute);
   } catch (err) {
     next(err);

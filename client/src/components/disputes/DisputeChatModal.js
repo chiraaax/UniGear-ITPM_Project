@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Send, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -8,8 +8,13 @@ const DisputeChatModal = ({ dispute, onClose, refreshDisputes, pushToast }) => {
   const { token, user, theme } = useAuth();
   const isLight = theme === 'light';
   
+  const [activeDispute, setActiveDispute] = useState(dispute);
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    setActiveDispute(dispute);
+  }, [dispute]);
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -26,9 +31,11 @@ const DisputeChatModal = ({ dispute, onClose, refreshDisputes, pushToast }) => {
         body: JSON.stringify({ content })
       });
 
-      if (!res.ok) throw new Error('Failed to send message');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || 'Failed to send message');
       
       setContent('');
+      setActiveDispute(data);
       refreshDisputes(); // Refresh dashboard data (which passes new dispute obj)
     } catch (err) {
       if (pushToast) pushToast('error', 'Error', err.message);
@@ -49,12 +56,12 @@ const DisputeChatModal = ({ dispute, onClose, refreshDisputes, pushToast }) => {
         {/* Header */}
         <div className={`flex items-center justify-between p-6 border-b ${isLight ? 'border-slate-200' : 'border-slate-700/50'}`}>
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-xl ${dispute.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500' : dispute.status === 'resolved' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+            <div className={`p-2 rounded-xl ${activeDispute.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500' : activeDispute.status === 'resolved' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
               <AlertTriangle className="w-6 h-6" />
             </div>
             <div>
-              <h2 className={`text-lg font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Dispute #{dispute._id.substring(dispute._id.length - 6)}</h2>
-              <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Status: <span className="uppercase font-semibold">{dispute.status}</span></p>
+              <h2 className={`text-lg font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Dispute #{activeDispute._id.substring(activeDispute._id.length - 6)}</h2>
+              <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Status: <span className="uppercase font-semibold">{activeDispute.status}</span></p>
             </div>
           </div>
           <button 
@@ -69,12 +76,12 @@ const DisputeChatModal = ({ dispute, onClose, refreshDisputes, pushToast }) => {
 
         {/* Reason Context */}
         <div className={`p-4 text-sm ${isLight ? 'bg-slate-50 border-b border-slate-200' : 'bg-slate-900/50 border-b border-slate-700/50'}`}>
-          <p className={`${isLight ? 'text-slate-600' : 'text-slate-300'}`}><span className={`font-semibold ${isLight ? 'text-slate-800' : 'text-slate-100'}`}>Original Reason:</span> {dispute.reason}</p>
+          <p className={`${isLight ? 'text-slate-600' : 'text-slate-300'}`}><span className={`font-semibold ${isLight ? 'text-slate-800' : 'text-slate-100'}`}>Original Reason:</span> {activeDispute.reason}</p>
         </div>
 
         {/* Chat Messages */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {dispute.messages && dispute.messages.map((msg, idx) => {
+          {activeDispute.messages && activeDispute.messages.map((msg, idx) => {
             const isMe = msg.sender?._id === user._id || msg.sender === user._id;
             const isSystem = msg.isAdmin;
             
@@ -97,7 +104,7 @@ const DisputeChatModal = ({ dispute, onClose, refreshDisputes, pushToast }) => {
               </div>
             );
           })}
-          {(!dispute.messages || dispute.messages.length === 0) && (
+          {(!activeDispute.messages || activeDispute.messages.length === 0) && (
             <div className="h-full flex flex-col items-center justify-center opacity-50 space-y-2">
               <span className="text-4xl text-slate-500">💬</span>
               <p className={isLight ? 'text-slate-500' : 'text-slate-400'}>No messages yet. Send a message to the admin.</p>
@@ -106,7 +113,7 @@ const DisputeChatModal = ({ dispute, onClose, refreshDisputes, pushToast }) => {
         </div>
 
         {/* Input Area */}
-        {dispute.status === 'pending' ? (
+        {activeDispute.status === 'pending' ? (
           <form onSubmit={handleSend} className={`p-4 border-t flex gap-2 ${isLight ? 'border-slate-200 bg-slate-50' : 'border-slate-700/50 bg-slate-900/50'}`}>
             <input
               type="text"
@@ -127,7 +134,7 @@ const DisputeChatModal = ({ dispute, onClose, refreshDisputes, pushToast }) => {
           </form>
         ) : (
           <div className={`p-4 text-center text-sm ${isLight ? 'bg-slate-100 text-slate-500' : 'bg-slate-800 text-slate-400'}`}>
-            This dispute is marked as {dispute.status}. Messaging is disabled.
+            This dispute is marked as {activeDispute.status}. Messaging is disabled.
           </div>
         )}
       </div>

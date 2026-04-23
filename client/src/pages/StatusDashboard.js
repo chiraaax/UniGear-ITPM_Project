@@ -18,7 +18,7 @@ import DisputeChatModal from "../components/disputes/DisputeChatModal";
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000/api";
 
 const StatusDashboard = () => {
-  const { token, user } = useAuth();
+  const { token, user, authReady } = useAuth();
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
@@ -32,6 +32,12 @@ const StatusDashboard = () => {
   const [notification, setNotification] = useState(null);
   const [reportModalData, setReportModalData] = useState(null);
   const [chatModalData, setChatModalData] = useState(null);
+
+  const getUserId = (userRef) => {
+    if (!userRef) return null;
+    if (typeof userRef === 'string') return userRef;
+    return userRef._id || null;
+  };
 
   const showNotification = (message, type = "success") => {
     setNotification({ message, type });
@@ -49,6 +55,8 @@ const StatusDashboard = () => {
   };
 
   useEffect(() => {
+    if (!authReady) return;
+
     if (!token) {
       navigate("/auth");
       return;
@@ -90,7 +98,7 @@ const StatusDashboard = () => {
     }
 
     load();
-  }, [token, navigate]);
+  }, [token, navigate, authReady]);
 
   const authHeaders = token
     ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
@@ -452,7 +460,9 @@ const StatusDashboard = () => {
                           type="button"
                           className="small-action flex-1 text-red-400 hover:bg-red-500/20 border-red-500/30"
                           onClick={() => setReportModalData({
-                            targetType: 'Rental', targetId: booking.item?._id, reportedUserId: booking.item?.owner
+                            targetType: 'Rental',
+                            targetId: booking.item?._id,
+                            reportedUserId: getUserId(booking.item?.owner)
                           })}
                         >
                           🚩 Report
@@ -548,7 +558,9 @@ const StatusDashboard = () => {
                     
                     <button
                       onClick={() => setReportModalData({
-                        targetType: 'Task', targetId: task._id, reportedUserId: task.creator
+                        targetType: 'Task',
+                        targetId: task._id,
+                        reportedUserId: getUserId(task.creator)
                       })}
                       className="bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1 rounded flex items-center gap-1 hover:bg-red-500/30"
                     >
@@ -575,7 +587,9 @@ const StatusDashboard = () => {
                   <div className="flex gap-2 mt-2">
                     <button
                       onClick={() => setReportModalData({
-                        targetType: 'Task', targetId: task._id, reportedUserId: task.creator
+                        targetType: 'Task',
+                        targetId: task._id,
+                        reportedUserId: getUserId(task.creator)
                       })}
                       className="bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1 bg-opacity-50 text-xs rounded flex items-center gap-1 hover:bg-red-500/30"
                     >
@@ -637,6 +651,7 @@ const StatusDashboard = () => {
           targetId={reportModalData.targetId}
           reportedUserId={reportModalData.reportedUserId}
           onClose={() => setReportModalData(null)}
+          onSubmitted={() => loadDisputes()}
           pushToast={showNotification}
         />
       )}

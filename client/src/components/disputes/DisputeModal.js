@@ -4,17 +4,24 @@ import { useAuth } from '../../context/AuthContext';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
 
-const DisputeModal = ({ targetType, targetId, reportedUserId, onClose, pushToast }) => {
+const DisputeModal = ({ targetType, targetId, reportedUserId, onClose, pushToast, onSubmitted }) => {
   const { token, theme } = useAuth();
   const isLight = theme === 'light';
   
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const normalizedReportedUserId =
+    typeof reportedUserId === 'string' ? reportedUserId : reportedUserId?._id;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!reason.trim()) {
       pushToast('error', 'Error', 'Reason is required to open a dispute.');
+      return;
+    }
+    if (!targetId || !normalizedReportedUserId) {
+      pushToast('error', 'Error', 'Missing dispute target details. Please refresh and try again.');
       return;
     }
 
@@ -29,7 +36,7 @@ const DisputeModal = ({ targetType, targetId, reportedUserId, onClose, pushToast
         body: JSON.stringify({
           targetType,
           targetId,
-          reportedUser: reportedUserId,
+          reportedUser: normalizedReportedUserId,
           reason: reason.trim()
         })
       });
@@ -38,6 +45,7 @@ const DisputeModal = ({ targetType, targetId, reportedUserId, onClose, pushToast
       if (!res.ok) throw new Error(data.message || 'Failed to submit dispute');
 
       pushToast('success', 'Dispute Opened', 'Your dispute has been sent to the administration. You can track it in your profile.');
+      if (onSubmitted) onSubmitted(data);
       onClose();
     } catch (err) {
       pushToast('error', 'Submission Failed', err.message);
