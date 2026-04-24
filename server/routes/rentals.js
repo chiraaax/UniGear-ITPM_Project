@@ -6,6 +6,7 @@ const Transaction = require("../models/Transaction");
 const auth = require("../middleware/auth");
 const requireMinTrustScore = require("../middleware/trustCheck");
 
+const mongoose = require("mongoose");
 const router = express.Router();
 
 // CREATE item listing (subject to TrustScore rule)
@@ -308,13 +309,21 @@ router.get("/owner-bookings", auth, async (req, res) => {
 });
 
 // Check availability of an item for a given date range
-router.get("/items/:id/availability", async (req, res) => {
-  const bookings = await Booking.find({
-    item: req.params.id,
-    status: { $in: ["pending", "confirmed"] },
-  });
+router.get("/items/:id/availability", async (req, res, next) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: "Invalid item id" });
+    }
 
-  res.json(bookings);
+    const bookings = await Booking.find({
+      item: req.params.id,
+      status: { $in: ["pending", "confirmed"] },
+    });
+
+    res.json(bookings);
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = router;
