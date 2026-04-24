@@ -1,17 +1,20 @@
 import { test, expect } from '@playwright/test';
 
+//Date setup for booking tests
 const tomorrow = new Date();
 tomorrow.setDate(tomorrow.getDate() + 1);
 
+//Create future dates
 const dayAfter = new Date();
 dayAfter.setDate(dayAfter.getDate() + 3);
 
+//Converts a date into YYYY-MM-DD format
 const fmt = (d) => d.toISOString().split('T')[0];
 
 test.describe('Booking flow', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.setItem('unigear_token', 'fake-token');
+      localStorage.setItem('unigear_token', 'fake-token'); //Fake login
       localStorage.setItem(
         'unigear_user',
         JSON.stringify({
@@ -22,6 +25,7 @@ test.describe('Booking flow', () => {
       );
     });
 
+    //Mock API: Get items
     await page.route('**/api/rentals/items', async (route) => {
       await route.fulfill({
         status: 200,
@@ -40,6 +44,7 @@ test.describe('Booking flow', () => {
       });
     });
 
+    //Mock availability
     await page.route('**/api/rentals/items/item1/availability', async (route) => {
       await route.fulfill({
         status: 200,
@@ -49,6 +54,7 @@ test.describe('Booking flow', () => {
     });
   });
 
+  //Successful booking
   test('books an item successfully', async ({ page }) => {
     await page.route('**/api/rentals/items/item1/bookings', async (route) => {
       await route.fulfill({
@@ -73,6 +79,7 @@ test.describe('Booking flow', () => {
     });
   });
 
+  //Ensures validation works when no dates are selected
   test('prevents booking without dates', async ({ page }) => {
     await page.goto('/rentals');
 
@@ -84,6 +91,7 @@ test.describe('Booking flow', () => {
     await page.getByRole('button', { name: /book now/i }).click();
   });
 
+  //Ensures validation works when end date is before start date
   test('prevents end date before start date', async ({ page }) => {
     const later = new Date();
     later.setDate(later.getDate() + 5);
@@ -104,6 +112,7 @@ test.describe('Booking flow', () => {
     await page.getByRole('button', { name: /book now/i }).click();
   });
 
+  //Overlapping booking
   test('shows backend overlap error', async ({ page }) => {
     await page.route('**/api/rentals/items/item1/bookings', async (route) => {
       await route.fulfill({

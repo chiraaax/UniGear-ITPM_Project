@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 
+//Mock data (fake items)
 const mockItems = [
   {
     _id: 'item1',
@@ -31,6 +32,7 @@ test.describe('RentalPage', () => {
       });
     });
 
+    //All items are available
     await page.route('**/api/rentals/items/item1/availability', async (route) => {
       await route.fulfill({
         status: 200,
@@ -48,6 +50,7 @@ test.describe('RentalPage', () => {
     });
   });
 
+  //Show items
   test('shows rental items', async ({ page }) => {
     await page.goto('/rentals');
 
@@ -56,6 +59,7 @@ test.describe('RentalPage', () => {
     await expect(page.getByText('Football Kit')).toBeVisible();
   });
 
+  //Search filtering works
   test('search filters items', async ({ page }) => {
     await page.goto('/rentals');
 
@@ -65,6 +69,7 @@ test.describe('RentalPage', () => {
     await expect(page.getByText('Football Kit')).not.toBeVisible();
   });
 
+  //Category filter works
   test('category filter works', async ({ page }) => {
     await page.goto('/rentals');
 
@@ -74,6 +79,7 @@ test.describe('RentalPage', () => {
     await expect(page.getByText('Canon Camera')).not.toBeVisible();
   });
 
+  //Shows add item modal
   test('opens add item modal', async ({ page }) => {
     await page.goto('/rentals');
 
@@ -83,6 +89,7 @@ test.describe('RentalPage', () => {
     await expect(page.locator('input[name="title"]')).toBeVisible();
   });
 
+  //Creates a new item
   test('creates a new item', async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem('token', 'fake-token');
@@ -92,6 +99,7 @@ test.describe('RentalPage', () => {
       );
     });
 
+    //Returns fake upload URL
     await page.route('**/api/upload/generate-url', async (route) => {
       await route.fulfill({
         status: 200,
@@ -103,6 +111,7 @@ test.describe('RentalPage', () => {
       });
     });
 
+    //Pretends image upload
     await page.route('https://fake-s3-url.com/upload', async (route) => {
       await route.fulfill({ status: 200, body: '' });
     });
@@ -145,6 +154,7 @@ test.describe('RentalPage', () => {
     await expect(page.locator('input[name="title"]')).not.toBeVisible();
   });
 
+  //Empty state
   test('shows empty state when no items exist', async ({ page }) => {
     await page.route('**/api/rentals/items', async (route) => {
       await route.fulfill({

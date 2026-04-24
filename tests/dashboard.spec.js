@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('StatusDashboard - rentals part', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.setItem('unigear_token', 'fake-token');
+      localStorage.setItem('unigear_token', 'fake-token'); //Fake login
       localStorage.setItem(
         'unigear_user',
         JSON.stringify({
@@ -14,6 +14,7 @@ test.describe('StatusDashboard - rentals part', () => {
       );
     });
 
+    //Mock API responses
     await page.route('**/api/users/me', async (route) => {
       await route.fulfill({
         status: 200,
@@ -81,6 +82,7 @@ test.describe('StatusDashboard - rentals part', () => {
     });
   });
 
+  //Shows "My Rentals"
   test('shows my rentals section', async ({ page }) => {
     await page.goto('/me');
 
@@ -90,6 +92,7 @@ test.describe('StatusDashboard - rentals part', () => {
     await expect(page.getByText('LKR 1500')).toBeVisible();
   });
 
+  //Shows "My Bookings"
   test('shows my bookings section', async ({ page }) => {
     await page.goto('/me');
 
@@ -99,9 +102,11 @@ test.describe('StatusDashboard - rentals part', () => {
     await expect(page.getByText(/LKR 2000\/day/i)).toBeVisible();
   });
 
+  //Returns an item
   test('returns an item successfully', async ({ page }) => {
     let returned = false;
 
+    //Mock API: Return item
     await page.route('**/api/rentals/bookings/booking1/return', async (route) => {
       returned = true;
       await route.fulfill({
@@ -166,6 +171,7 @@ test.describe('StatusDashboard - rentals part', () => {
     await expect(page.getByText(/returned/i)).toBeVisible();
   });
 
+  //Empty bookings
   test('shows empty state when no bookings', async ({ page }) => {
     await page.route('**/api/rentals/my-bookings', async (route) => {
       await route.fulfill({
