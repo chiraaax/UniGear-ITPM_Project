@@ -17,6 +17,26 @@ import DisputeChatModal from "../components/disputes/DisputeChatModal";
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000/api";
 
+const fetchJson = async (url, options = {}, fallback = null) => {
+  const res = await fetch(url, options);
+  const text = await res.text();
+  let data = fallback;
+
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { message: text };
+    }
+  }
+
+  if (!res.ok) {
+    throw new Error(data?.message || `Request failed with status ${res.status}`);
+  }
+
+  return data ?? fallback;
+};
+
 const StatusDashboard = () => {
   const { token, user, authReady } = useAuth();
   const navigate = useNavigate();
@@ -28,9 +48,9 @@ const StatusDashboard = () => {
   const [myBookings, setMyBookings] = useState([]);
   const [myDisputes, setMyDisputes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState("");
   const [completingId, setCompletingId] = useState(null);
   const [notification, setNotification] = useState(null);
-  const [reportModalData, setReportModalData] = useState(null);
   const [chatModalData, setChatModalData] = useState(null);
 
   const getUserId = (userRef) => {
@@ -46,9 +66,12 @@ const StatusDashboard = () => {
 
   const loadDisputes = async () => {
     try {
-      const res = await fetch(`${API_BASE}/disputes/mine`, { headers: { Authorization: `Bearer ${token}` } });
-      const data = await res.json();
-      if (res.ok) setMyDisputes(data);
+      const data = await fetchJson(
+        `${API_BASE}/disputes/mine`,
+        { headers: { Authorization: `Bearer ${token}` } },
+        []
+      );
+      setMyDisputes(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error(e);
     }
@@ -66,32 +89,56 @@ const StatusDashboard = () => {
 
     async function load() {
       try {
-        const [meRes, itemsRes, tasksRes, txRes, bookingRes, disputesRes] =
-          await Promise.all([
-            fetch(`${API_BASE}/users/me`, { headers }),
-            fetch(`${API_BASE}/rentals/my-items`, { headers }),
-            fetch(`${API_BASE}/tasks/my-tasks`, { headers }),
-            fetch(`${API_BASE}/transactions`, { headers }),
-            fetch(`${API_BASE}/rentals/my-bookings`, { headers }),
-            fetch(`${API_BASE}/disputes/mine`, { headers }),
-          ]);
+        setDashboardError("");
 
-        const [me, items, tasks, txs, bookings, disputes] = await Promise.all([
-          meRes.json(),
-          itemsRes.json(),
-          tasksRes.json(),
-          txRes.json(),
-          bookingRes.json(),
-          disputesRes.json(),
-        ]);
+        const requests = [
+          ["profile", `${API_BASE}/users/me`, null],
+          ["rentals", `${API_BASE}/rentals/my-items`, []],
+          ["tasks", `${API_BASE}/tasks/my-tasks`, []],
+          ["transactions", `${API_BASE}/transactions`, []],
+          ["bookings", `${API_BASE}/rentals/my-bookings`, []],
+          ["disputes", `${API_BASE}/disputes/mine`, []],
+        ];
 
-        setProfile(me);
-        setMyItems(Array.isArray(items) ? items : []);
-        setMyTasks(Array.isArray(tasks) ? tasks : []);
-        setMyBookings(Array.isArray(bookings) ? bookings : []);
-        setMyDisputes(Array.isArray(disputes) ? disputes : []);
+        const results = await Promise.all(
+          requests.map(async ([key, url, fallback]) => {
+            try {
+              return { key, data: await fetchJson(url, { headers }, fallback) };
+            } catch (error) {
+              console.error(`Error loading ${key}:`, error);
+              return { key, data: fallback, error };
+            }
+          })
+        );
+
+        const failed = results.filter((result) => result.error);
+        const dataByKey = Object.fromEntries(
+          results.map((result) => [result.key, result.data])
+        );
+
+        setProfile(dataByKey.profile);
+        setMyItems(Array.isArray(dataByKey.rentals) ? dataByKey.rentals : []);
+        setMyTasks(Array.isArray(dataByKey.tasks) ? dataByKey.tasks : []);
+        setTransactions(
+          Array.isArray(dataByKey.transactions) ? dataByKey.transactions : []
+        );
+        setMyBookings(
+          Array.isArray(dataByKey.bookings) ? dataByKey.bookings : []
+        );
+        setMyDisputes(
+          Array.isArray(dataByKey.disputes) ? dataByKey.disputes : []
+        );
+
+        if (failed.length > 0) {
+          setDashboardError(
+            `Some dashboard data could not be loaded: ${failed
+              .map((result) => result.key)
+              .join(", ")}.`
+          );
+        }
       } catch (e) {
         console.error("Error loading dashboard:", e);
+        setDashboardError("Dashboard data could not be loaded.");
       } finally {
         setLoading(false);
       }
@@ -125,11 +172,11 @@ const StatusDashboard = () => {
       alert("Item returned successfully ✅");
 
       // reload bookings
-      const bookingRes = await fetch(`${API_BASE}/rentals/my-bookings`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const bookings = await bookingRes.json();
+      const bookings = await fetchJson(
+        `${API_BASE}/rentals/my-bookings`,
+        { headers: { Authorization: `Bearer ${token}` } },
+        []
+      );
       setMyBookings(Array.isArray(bookings) ? bookings : []);
     } catch (e) {
       console.error("Error returning item:", e);
@@ -144,10 +191,11 @@ const StatusDashboard = () => {
         body: JSON.stringify({}),
       });
       // reload just transactions
-      const res = await fetch(`${API_BASE}/transactions`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
+      const data = await fetchJson(
+        `${API_BASE}/transactions`,
+        { headers: { Authorization: `Bearer ${token}` } },
+        []
+      );
       setTransactions(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error("Error confirming transaction:", e);
@@ -161,10 +209,11 @@ const StatusDashboard = () => {
         headers: authHeaders,
         body: JSON.stringify({ status: "Completed" }),
       });
-      const res = await fetch(`${API_BASE}/transactions`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
+      const data = await fetchJson(
+        `${API_BASE}/transactions`,
+        { headers: { Authorization: `Bearer ${token}` } },
+        []
+      );
       setTransactions(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error("Error marking completed:", e);
@@ -178,15 +227,18 @@ const StatusDashboard = () => {
         headers: authHeaders,
         body: JSON.stringify({ rating }),
       });
-      const [meRes, txRes] = await Promise.all([
-        fetch(`${API_BASE}/users/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${API_BASE}/transactions`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+      const [me, txs] = await Promise.all([
+        fetchJson(
+          `${API_BASE}/users/me`,
+          { headers: { Authorization: `Bearer ${token}` } },
+          null
+        ),
+        fetchJson(
+          `${API_BASE}/transactions`,
+          { headers: { Authorization: `Bearer ${token}` } },
+          []
+        ),
       ]);
-      const [me, txs] = await Promise.all([meRes.json(), txRes.json()]);
       setProfile(me);
       setTransactions(Array.isArray(txs) ? txs : []);
     } catch (e) {
@@ -281,6 +333,22 @@ const StatusDashboard = () => {
     t.status?.toLowerCase().includes("progress")
   );
 
+  const getTransactionTitle = (tx) => {
+    if (tx.item?.title) return tx.item.title;
+    if (tx.task?.description) return tx.task.description;
+    return tx.type === "rental" ? "Rental transaction" : "Task transaction";
+  };
+
+  const hasUserRated = (tx) => {
+    const currentUserId = user?._id;
+    if (!currentUserId) return true;
+    if (getUserId(tx.owner) === currentUserId) return Boolean(tx.ownerRating);
+    if (getUserId(tx.counterparty) === currentUserId) {
+      return Boolean(tx.counterpartyRating);
+    }
+    return true;
+  };
+
   if (!user) {
     return null;
   }
@@ -334,6 +402,12 @@ const StatusDashboard = () => {
 
       {loading && (
       <p className="text-sm text-slate-400">Loading your activity…</p>
+      )}
+
+      {dashboardError && (
+        <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
+          {dashboardError}
+        </div>
       )}
 
       <div className="grid md:grid-cols-2 gap-6">
@@ -456,18 +530,6 @@ const StatusDashboard = () => {
                           👁️ View
                         </button>
 
-                        <button
-                          type="button"
-                          className="small-action flex-1 text-red-400 hover:bg-red-500/20 border-red-500/30"
-                          onClick={() => setReportModalData({
-                            targetType: 'Rental',
-                            targetId: booking.item?._id,
-                            reportedUserId: getUserId(booking.item?.owner)
-                          })}
-                        >
-                          🚩 Report
-                        </button>
-
                         {booking.status !== "returned" && (
                           <button
                             type="button"
@@ -517,11 +579,17 @@ const StatusDashboard = () => {
                   <p className="text-sm text-gray-400">LKR {task.budget}</p>
 
                   <div className="flex gap-2 mt-3">
-                    <button className="bg-yellow-500 px-3 py-1 rounded flex items-center gap-1 hover:bg-yellow-600">
+                    <button
+                      onClick={() => handleEditTask(task._id)}
+                      className="bg-yellow-500 px-3 py-1 rounded flex items-center gap-1 hover:bg-yellow-600"
+                    >
                       <Pencil size={14} /> Edit
                     </button>
 
-                    <button className="bg-red-500 px-3 py-1 rounded flex items-center gap-1 hover:bg-red-600">
+                    <button
+                      onClick={() => handleDeleteTask(task._id)}
+                      className="bg-red-500 px-3 py-1 rounded flex items-center gap-1 hover:bg-red-600"
+                    >
                       <Trash2 size={14} /> Delete
                     </button>
                   </div>
@@ -555,18 +623,6 @@ const StatusDashboard = () => {
                       <CheckCircle size={14} />
                       {completingId === task._id ? "Completing..." : "Complete"}
                     </button>
-                    
-                    <button
-                      onClick={() => setReportModalData({
-                        targetType: 'Task',
-                        targetId: task._id,
-                        reportedUserId: getUserId(task.creator)
-                      })}
-                      className="bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1 rounded flex items-center gap-1 hover:bg-red-500/30"
-                    >
-                      <AlertTriangle size={14} />
-                      Report Dispute
-                    </button>
                   </div>
                 </div>
               ))
@@ -584,24 +640,98 @@ const StatusDashboard = () => {
               myTasks.filter(t => t.status?.toLowerCase() === 'completed').map((task) => (
                 <div key={task._id} className="bg-slate-800/50 p-4 rounded-xl mb-2 border border-slate-700/50">
                   <p className="text-slate-300 line-clamp-1">{task.description}</p>
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={() => setReportModalData({
-                        targetType: 'Task',
-                        targetId: task._id,
-                        reportedUserId: getUserId(task.creator)
-                      })}
-                      className="bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1 bg-opacity-50 text-xs rounded flex items-center gap-1 hover:bg-red-500/30"
-                    >
-                      <AlertTriangle size={12} /> Report Issue
-                    </button>
-                  </div>
                 </div>
               ))
             ) : (
               <p className="text-gray-500 text-sm">No completed tasks</p>
             )}
           </div>
+        </section>
+
+        {/* ================= TRANSACTIONS ================= */}
+        <section className="md:col-span-2 bg-slate-900/70 backdrop-blur p-5 rounded-2xl border border-slate-700 shadow">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-sky-400 mb-4">
+            <CheckCircle size={18} /> Transaction Status
+          </h2>
+
+          {transactions.length > 0 ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {transactions.map((tx) => {
+                const isCompleted = tx.status === "Completed";
+                const ownerConfirmed = Boolean(tx.ownerConfirmed);
+                const counterpartyConfirmed = Boolean(tx.counterpartyConfirmed);
+
+                return (
+                  <article
+                    key={tx._id}
+                    className="rounded-xl border border-slate-700/60 bg-slate-800/70 p-4"
+                  >
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-100">
+                          {getTransactionTitle(tx)}
+                        </p>
+                        <p className="mt-1 text-xs capitalize text-slate-400">
+                          {tx.type}
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-sky-900/40 px-2 py-0.5 text-[11px] text-sky-100">
+                        {tx.status}
+                      </span>
+                    </div>
+
+                    <div className="mb-3 space-y-1 text-xs text-slate-300">
+                      <p>Owner confirmed: {ownerConfirmed ? "Yes" : "No"}</p>
+                      <p>
+                        Counterparty confirmed:{" "}
+                        {counterpartyConfirmed ? "Yes" : "No"}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {!isCompleted && (
+                        <>
+                          <button
+                            type="button"
+                            className="small-action"
+                            onClick={() => handleConfirm(tx._id)}
+                          >
+                            Confirm
+                          </button>
+                          <button
+                            type="button"
+                            className="small-action"
+                            onClick={() => handleMarkCompleted(tx)}
+                          >
+                            Complete
+                          </button>
+                        </>
+                      )}
+
+                      {isCompleted && !hasUserRated(tx) && (
+                        <div className="flex flex-wrap gap-1">
+                          {[1, 2, 3, 4, 5].map((rating) => (
+                            <button
+                              key={rating}
+                              type="button"
+                              className="small-action"
+                              onClick={() => handleRate(tx._id, rating)}
+                            >
+                              {rating}★
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400">
+              No transactions recorded yet.
+            </p>
+          )}
         </section>
 
         {/* ================= DISPUTES ================= */}
@@ -644,17 +774,6 @@ const StatusDashboard = () => {
           )}
         </section>
       </div>
-
-      {reportModalData && (
-        <DisputeModal
-          targetType={reportModalData.targetType}
-          targetId={reportModalData.targetId}
-          reportedUserId={reportModalData.reportedUserId}
-          onClose={() => setReportModalData(null)}
-          onSubmitted={() => loadDisputes()}
-          pushToast={showNotification}
-        />
-      )}
 
       {chatModalData && (
         <DisputeChatModal
