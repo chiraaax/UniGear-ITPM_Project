@@ -35,6 +35,7 @@ app.use('/api/ratings', ratingsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/disputes', require('./routes/disputes'));
 
 // Simple health check
 app.get('/api/health', (req, res) => {

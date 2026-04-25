@@ -9,12 +9,16 @@ import {
   CheckCircle,
   Clock,
   ListCollapse,
+  AlertTriangle,
+  MessageCircle
 } from "lucide-react";
+import DisputeModal from "../components/disputes/DisputeModal";
+import DisputeChatModal from "../components/disputes/DisputeChatModal";
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000/api";
 
 const StatusDashboard = () => {
-  const { token, user } = useAuth();
+  const { token, user, authReady } = useAuth();
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
@@ -22,16 +26,37 @@ const StatusDashboard = () => {
   const [myTasks, setMyTasks] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [myBookings, setMyBookings] = useState([]);
+  const [myDisputes, setMyDisputes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [completingId, setCompletingId] = useState(null);
   const [notification, setNotification] = useState(null);
+  const [reportModalData, setReportModalData] = useState(null);
+  const [chatModalData, setChatModalData] = useState(null);
+
+  const getUserId = (userRef) => {
+    if (!userRef) return null;
+    if (typeof userRef === 'string') return userRef;
+    return userRef._id || null;
+  };
 
   const showNotification = (message, type = "success") => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 3000);
   };
 
+  const loadDisputes = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/disputes/mine`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (res.ok) setMyDisputes(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
+    if (!authReady) return;
+
     if (!token) {
       navigate("/auth");
       return;
@@ -41,27 +66,30 @@ const StatusDashboard = () => {
 
     async function load() {
       try {
-        const [meRes, itemsRes, tasksRes, txRes, bookingRes] =
+        const [meRes, itemsRes, tasksRes, txRes, bookingRes, disputesRes] =
           await Promise.all([
             fetch(`${API_BASE}/users/me`, { headers }),
             fetch(`${API_BASE}/rentals/my-items`, { headers }),
             fetch(`${API_BASE}/tasks/my-tasks`, { headers }),
             fetch(`${API_BASE}/transactions`, { headers }),
             fetch(`${API_BASE}/rentals/my-bookings`, { headers }),
+            fetch(`${API_BASE}/disputes/mine`, { headers }),
           ]);
 
-        const [me, items, tasks, txs, bookings] = await Promise.all([
+        const [me, items, tasks, txs, bookings, disputes] = await Promise.all([
           meRes.json(),
           itemsRes.json(),
           tasksRes.json(),
           txRes.json(),
           bookingRes.json(),
+          disputesRes.json(),
         ]);
 
         setProfile(me);
         setMyItems(Array.isArray(items) ? items : []);
         setMyTasks(Array.isArray(tasks) ? tasks : []);
         setMyBookings(Array.isArray(bookings) ? bookings : []);
+        setMyDisputes(Array.isArray(disputes) ? disputes : []);
       } catch (e) {
         console.error("Error loading dashboard:", e);
       } finally {
@@ -70,7 +98,7 @@ const StatusDashboard = () => {
     }
 
     load();
-  }, [token, navigate]);
+  }, [token, navigate, authReady]);
 
   const authHeaders = token
     ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
@@ -425,7 +453,19 @@ const StatusDashboard = () => {
                           className="small-action flex-1"
                           onClick={() => navigate("/rentals")}
                         >
-                          👁️ View Item
+                          👁️ View
+                        </button>
+
+                        <button
+                          type="button"
+                          className="small-action flex-1 text-red-400 hover:bg-red-500/20 border-red-500/30"
+                          onClick={() => setReportModalData({
+                            targetType: 'Rental',
+                            targetId: booking.item?._id,
+                            reportedUserId: getUserId(booking.item?.owner)
+                          })}
+                        >
+                          🚩 Report
                         </button>
 
                         {booking.status !== "returned" && (
@@ -492,7 +532,7 @@ const StatusDashboard = () => {
             )}
           </div>
 
-          {/* In Progress */}
+          {/* ENHANCED IN PROGRESS */}
           <div>
             <h3 className="flex items-center gap-2 text-blue-400 mb-2">
               <Clock size={16} /> In Progress
@@ -506,22 +546,124 @@ const StatusDashboard = () => {
                 >
                   <p>{task.description}</p>
 
-                  <button
-                    onClick={() => handleCompleteTask(task._id)}
-                    disabled={completingId === task._id}
-                    className="mt-2 bg-green-500 px-3 py-1 rounded flex items-center gap-1 hover:bg-green-600 disabled:opacity-50"
-                  >
-                    <CheckCircle size={14} />
-                    {completingId === task._id ? "Completing..." : "Complete"}
-                  </button>
+                  <div className="flex gap-2 mt-3 flex-wrap">
+                    <button
+                      onClick={() => handleCompleteTask(task._id)}
+                      disabled={completingId === task._id}
+                      className="bg-green-500 px-3 py-1 rounded flex items-center gap-1 hover:bg-green-600 disabled:opacity-50"
+                    >
+                      <CheckCircle size={14} />
+                      {completingId === task._id ? "Completing..." : "Complete"}
+                    </button>
+                    
+                    <button
+                      onClick={() => setReportModalData({
+                        targetType: 'Task',
+                        targetId: task._id,
+                        reportedUserId: getUserId(task.creator)
+                      })}
+                      className="bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1 rounded flex items-center gap-1 hover:bg-red-500/30"
+                    >
+                      <AlertTriangle size={14} />
+                      Report Dispute
+                    </button>
+                  </div>
                 </div>
               ))
             ) : (
               <p className="text-gray-400 text-sm">No in-progress tasks</p>
             )}
           </div>
+
+          {/* COMPLETED TASKS (FOR HISTORY REPORTS) */}
+          <div className="mt-6">
+            <h3 className="flex items-center gap-2 text-gray-400 mb-2">
+              <CheckCircle size={16} /> Completed (History)
+            </h3>
+            {myTasks.filter(t => t.status?.toLowerCase() === 'completed').length > 0 ? (
+              myTasks.filter(t => t.status?.toLowerCase() === 'completed').map((task) => (
+                <div key={task._id} className="bg-slate-800/50 p-4 rounded-xl mb-2 border border-slate-700/50">
+                  <p className="text-slate-300 line-clamp-1">{task.description}</p>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => setReportModalData({
+                        targetType: 'Task',
+                        targetId: task._id,
+                        reportedUserId: getUserId(task.creator)
+                      })}
+                      className="bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1 bg-opacity-50 text-xs rounded flex items-center gap-1 hover:bg-red-500/30"
+                    >
+                      <AlertTriangle size={12} /> Report Issue
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500 text-sm">No completed tasks</p>
+            )}
+          </div>
+        </section>
+
+        {/* ================= DISPUTES ================= */}
+        <section className="md:col-span-2 bg-slate-900/70 backdrop-blur p-5 rounded-2xl border border-red-900/50 shadow mt-6">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-red-400 mb-4">
+            <AlertTriangle size={18} /> My Active Disputes
+          </h2>
+          {myDisputes.length > 0 ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {myDisputes.map(dispute => (
+                <div key={dispute._id} className="bg-slate-800/80 p-4 rounded-xl border border-slate-700/50 flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-start mb-2">
+                      <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${
+                        dispute.status === 'resolved' ? 'bg-green-500/20 text-green-400' :
+                        dispute.status === 'dismissed' ? 'bg-red-500/20 text-red-400' :
+                        'bg-yellow-500/20 text-yellow-500'
+                      }`}>
+                        {dispute.status}
+                      </span>
+                      <span className="text-xs text-slate-500">{new Date(dispute.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <p className="text-sm font-semibold text-slate-200 mb-1">Dispute against {dispute.reportedUser?.name || 'User'}</p>
+                    <p className="text-xs text-slate-400 line-clamp-2 mb-3">{dispute.reason}</p>
+                  </div>
+                  <button
+                    onClick={() => setChatModalData(dispute)}
+                    className="flex items-center justify-center gap-2 w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all"
+                  >
+                    <MessageCircle size={16} /> Open Chat
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+             <div className="text-center py-6">
+                <span className="text-3xl">🕊️</span>
+                <p className="text-sm text-slate-400 mt-2">No active disputes reported.</p>
+             </div>
+          )}
         </section>
       </div>
+
+      {reportModalData && (
+        <DisputeModal
+          targetType={reportModalData.targetType}
+          targetId={reportModalData.targetId}
+          reportedUserId={reportModalData.reportedUserId}
+          onClose={() => setReportModalData(null)}
+          onSubmitted={() => loadDisputes()}
+          pushToast={showNotification}
+        />
+      )}
+
+      {chatModalData && (
+        <DisputeChatModal
+          dispute={chatModalData}
+          onClose={() => { setChatModalData(null); loadDisputes(); }}
+          refreshDisputes={loadDisputes}
+          pushToast={showNotification}
+        />
+      )}
 
       <style>{`
         .small-action {

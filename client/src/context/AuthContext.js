@@ -6,6 +6,7 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
   const [theme, setTheme] = useState('dark');
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
     const storedToken = localStorage.getItem('unigear_token');
@@ -18,6 +19,7 @@ export const AuthProvider = ({ children }) => {
     if (storedTheme === 'light' || storedTheme === 'dark') {
       setTheme(storedTheme);
     }
+    setAuthReady(true);
   }, []);
 
   useEffect(() => {
@@ -47,7 +49,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout, theme, toggleTheme }}>
+    <AuthContext.Provider value={{ token, user, login, logout, theme, toggleTheme, authReady }}>
       {children}
     </AuthContext.Provider>
   );
