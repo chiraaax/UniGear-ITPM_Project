@@ -87,6 +87,7 @@ const writeAuditLog = async ({ adminId, adminRole, action, targetType, targetId,
   });
 };
 
+// -------------------- Dashboard & Stats --------------------
 router.get('/dashboard', async (req, res, next) => {
   try {
     const [pendingRentals, pendingTasks, totalUsers] = await Promise.all([
@@ -100,6 +101,87 @@ router.get('/dashboard', async (req, res, next) => {
   }
 });
 
+router.get('/analytics', async (req, res, next) => {
+  try {
+    const [
+      rentalPending,
+      rentalApproved,
+      rentalRejected,
+      taskPending,
+      taskApproved,
+      taskRejected,
+      rentalAvg,
+      taskAvg,
+    ] = await Promise.all([
+      Item.countDocuments({ moderationStatus: 'pending' }),
+      Item.countDocuments({ moderationStatus: 'approved' }),
+      Item.countDocuments({ moderationStatus: 'rejected' }),
+      Task.countDocuments({ moderationStatus: 'pending' }),
+      Task.countDocuments({ moderationStatus: 'approved' }),
+      Task.countDocuments({ moderationStatus: 'rejected' }),
+      Item.aggregate([
+        { $match: { moderationStatus: 'approved', moderatedAt: { $ne: null } } },
+        { $project: { diffMs: { $subtract: ['$moderatedAt', '$createdAt'] } } },
+        { $group: { _id: null, avgDiffMs: { $avg: '$diffMs' } } },
+      ]),
+      Task.aggregate([
+        { $match: { moderationStatus: 'approved', moderatedAt: { $ne: null } } },
+        { $project: { diffMs: { $subtract: ['$moderatedAt', '$createdAt'] } } },
+        { $group: { _id: null, avgDiffMs: { $avg: '$diffMs' } } },
+      ]),
+    ]);
+
+    const rentalAvgHours = rentalAvg?.[0]?.avgDiffMs ? rentalAvg[0].avgDiffMs / 3600000 : 0;
+    const taskAvgHours = taskAvg?.[0]?.avgDiffMs ? taskAvg[0].avgDiffMs / 3600000 : 0;
+
+    res.json({
+      rentals: {
+        pending: rentalPending,
+        approved: rentalApproved,
+        rejected: rentalRejected,
+        avgModerationHours: rentalAvgHours,
+      },
+      tasks: {
+        pending: taskPending,
+        approved: taskApproved,
+        rejected: taskRejected,
+        avgModerationHours: taskAvgHours,
+      },
+      overall: {
+        pending: rentalPending + taskPending,
+        approved: rentalApproved + taskApproved,
+        rejected: rentalRejected + taskRejected,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/queue-stats', async (req, res, next) => {
+  try {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const [staleRentals, staleTasks, recentRejectedRentals, recentRejectedTasks] = await Promise.all([
+      Item.countDocuments({ moderationStatus: 'pending', createdAt: { $lte: sevenDaysAgo } }),
+      Task.countDocuments({ moderationStatus: 'pending', createdAt: { $lte: sevenDaysAgo } }),
+      Item.countDocuments({ moderationStatus: 'rejected', moderatedAt: { $gte: sevenDaysAgo } }),
+      Task.countDocuments({ moderationStatus: 'rejected', moderatedAt: { $gte: sevenDaysAgo } }),
+    ]);
+
+    res.json({
+      staleRentals,
+      staleTasks,
+      recentRejectedRentals,
+      recentRejectedTasks,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// -------------------- Rental Management --------------------
 router.get('/rentals', async (req, res, next) => {
   try {
     const { moderationStatus = 'pending' } = req.query;
@@ -130,10 +212,7 @@ router.patch('/rentals/:id/moderate', async (req, res, next) => {
     const before = pickRentalAudit(rental);
     rental.moderationStatus = moderationStatus;
     rental.moderationNote = moderationNote.trim();
-    rental.moderationReasonCode =
-      moderationStatus === 'rejected'
-        ? moderationReasonCode || 'other'
-        : null;
+    rental.moderationReasonCode = moderationStatus === 'rejected' ? moderationReasonCode || 'other' : null;
     rental.moderatedBy = req.user._id;
     rental.moderatedAt = new Date();
     await rental.save();
@@ -213,6 +292,50 @@ router.delete('/rentals/:id', async (req, res, next) => {
   }
 });
 
+router.patch('/rentals/bulk-moderate', async (req, res, next) => {
+  try {
+    const { ids, moderationStatus } = req.body;
+    if (!['approved', 'rejected'].includes(moderationStatus) || !Array.isArray(ids)) {
+      return res.status(400).json({ message: 'Invalid payload' });
+    }
+    await Item.updateMany({ _id: { $in: ids } }, { $set: { moderationStatus, moderatedBy: req.user._id, moderatedAt: new Date() } });
+    await writeAuditLog({
+      adminId: req.user._id,
+      action: `bulk_rental_${moderationStatus}`,
+      targetType: 'rental',
+      targetId: ids[0],
+      details: { count: ids.length, ids },
+    });
+    res.json({ message: `Successfully ${moderationStatus} ${ids.length} rentals` });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/rentals/export', async (req, res, next) => {
+  try {
+    const rentals = await Item.find().populate('owner', 'name email').sort({ createdAt: -1 });
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="rentals-export.csv"');
+    const header = ['ID', 'Title', 'Category', 'Daily Rate', 'Status', 'Owner Name', 'Owner Email', 'Created At'];
+    const rows = rentals.map(r => [
+      r._id,
+      `"${r.title}"`,
+      `"${r.category}"`,
+      r.dailyRate,
+      r.moderationStatus,
+      `"${r.owner?.name || ''}"`,
+      `"${r.owner?.email || ''}"`,
+      r.createdAt,
+    ]);
+    const csv = [header.join(',')].concat(rows.map(r => r.join(','))).join('\n');
+    res.status(200).send(csv);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// -------------------- Task Management --------------------
 router.get('/tasks', async (req, res, next) => {
   try {
     const { moderationStatus = 'pending' } = req.query;
@@ -243,10 +366,7 @@ router.patch('/tasks/:id/moderate', async (req, res, next) => {
     const before = pickTaskAudit(task);
     task.moderationStatus = moderationStatus;
     task.moderationNote = moderationNote.trim();
-    task.moderationReasonCode =
-      moderationStatus === 'rejected'
-        ? moderationReasonCode || 'other'
-        : null;
+    task.moderationReasonCode = moderationStatus === 'rejected' ? moderationReasonCode || 'other' : null;
     task.moderatedBy = req.user._id;
     task.moderatedAt = new Date();
     await task.save();
@@ -329,6 +449,50 @@ router.delete('/tasks/:id', async (req, res, next) => {
   }
 });
 
+router.patch('/tasks/bulk-moderate', async (req, res, next) => {
+  try {
+    const { ids, moderationStatus } = req.body;
+    if (!['approved', 'rejected'].includes(moderationStatus) || !Array.isArray(ids)) {
+      return res.status(400).json({ message: 'Invalid payload' });
+    }
+    await Task.updateMany({ _id: { $in: ids } }, { $set: { moderationStatus, moderatedBy: req.user._id, moderatedAt: new Date() } });
+    await writeAuditLog({
+      adminId: req.user._id,
+      action: `bulk_task_${moderationStatus}`,
+      targetType: 'task',
+      targetId: ids[0],
+      details: { count: ids.length, ids },
+    });
+    res.json({ message: `Successfully ${moderationStatus} ${ids.length} tasks` });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/tasks/export', async (req, res, next) => {
+  try {
+    const tasks = await Task.find().populate('creator', 'name email').sort({ createdAt: -1 });
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="tasks-export.csv"');
+    const header = ['ID', 'Description', 'Category', 'Budget', 'Status', 'Creator Name', 'Creator Email', 'Created At'];
+    const rows = tasks.map(t => [
+      t._id,
+      `"${t.description.replace(/"/g, '""')}"`,
+      `"${t.category}"`,
+      t.budget,
+      t.moderationStatus,
+      `"${t.creator?.name || ''}"`,
+      `"${t.creator?.email || ''}"`,
+      t.createdAt,
+    ]);
+    const csv = [header.join(',')].concat(rows.map(r => r.join(','))).join('\n');
+    res.status(200).send(csv);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// -------------------- User Management --------------------
 router.get('/users', async (req, res, next) => {
   try {
     const users = await User.find({}).select('name email role isVerified trustScore isSuspended createdAt').sort({ createdAt: -1 });
@@ -372,52 +536,108 @@ router.patch('/users/:id', async (req, res, next) => {
   }
 });
 
+router.post('/users/:id/warn', async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    user.warnings = (user.warnings || 0) + 1;
+    await user.save();
+    await writeAuditLog({
+      adminId: req.user._id,
+      action: 'user_warned',
+      targetType: 'user',
+      targetId: user._id,
+      details: { warningCount: user.warnings },
+    });
+    res.json({ message: 'User warned successfully', warnings: user.warnings });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/users/:id/message', async (req, res, next) => {
+  try {
+    const { message } = req.body;
+    if (!message) return res.status(400).json({ message: 'Message cannot be empty' });
+    await writeAuditLog({
+      adminId: req.user._id,
+      action: 'user_messaged',
+      targetType: 'user',
+      targetId: req.params.id,
+      details: { message },
+    });
+    res.json({ message: 'Message sent successfully' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/users/:id/details', async (req, res, next) => {
+  try {
+    const [rentals, tasks] = await Promise.all([
+      Item.find({ owner: req.params.id }).sort({ createdAt: -1 }),
+      Task.find({ creator: req.params.id }).sort({ createdAt: -1 }),
+    ]);
+    res.json({ rentals, tasks });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/users/export', async (req, res, next) => {
+  try {
+    const users = await User.find().sort({ createdAt: -1 });
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="users-export.csv"');
+    const header = ['ID', 'Name', 'Email', 'Role', 'Verified', 'Suspended', 'Warnings', 'Created At'];
+    const rows = users.map(u => [
+      u._id,
+      `"${u.name}"`,
+      `"${u.email}"`,
+      u.role,
+      u.isVerified,
+      u.isSuspended,
+      u.warnings || 0,
+      u.createdAt,
+    ]);
+    const csv = [header.join(',')].concat(rows.map(r => r.join(','))).join('\n');
+    res.status(200).send(csv);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// -------------------- Audit Logs --------------------
 router.get('/audit-logs', async (req, res, next) => {
   try {
     const {
       action,
       targetType,
       adminId,
-      userId,  // Add userId filter
-      userRole,  // Add userRole filter
+      userId,
+      userRole,
       targetId,
       q,
       from,
       to,
       limit = '25',
       page = '1',
-      includeStudentActions = 'true',  // Add includeStudentActions
-      sortBy = 'createdAt',  // Add sortBy
-      sortOrder = 'desc',  // Add sortOrder
+      includeStudentActions = 'true',
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
     } = req.query;
 
     const query = {};
-    
-    // Apply filters
     if (action) query.action = String(action);
     if (targetType) query.targetType = String(targetType);
     if (adminId) query.admin = String(adminId);
     if (targetId) query.targetId = String(targetId);
-    
-    // Handle userId filter (search by admin user ID)
     if (userId) query.admin = String(userId);
-    
-    // Handle date range
     if (from || to) {
       query.createdAt = {};
       if (from) query.createdAt.$gte = new Date(from);
       if (to) query.createdAt.$lte = new Date(to);
     }
-
-    // Handle includeStudentActions - filter out admin actions if needed
-    const includeStudents = includeStudentActions === 'true';
-    if (!includeStudents) {
-      // We need to filter by user role, but the admin field only stores user ID
-      // We'll need to populate and filter after the query, or do an aggregation
-      // For simplicity, we'll fetch and filter later
-    }
-
-    // Handle search query
     if (q && q.trim()) {
       query.$or = [
         { action: { $regex: String(q), $options: 'i' } },
@@ -426,52 +646,39 @@ router.get('/audit-logs', async (req, res, next) => {
       ];
     }
 
-    // Parse pagination
     const parsedLimitRaw = Number(limit);
     const parsedPageRaw = Number(page);
     const parsedLimit = Math.min(Math.max(parsedLimitRaw || 25, 1), 100);
     const parsedPage = Math.max(parsedPageRaw || 1, 1);
     const skip = (parsedPage - 1) * parsedLimit;
 
-    // Build sort object
     const sort = {};
     sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-    // First, get logs with pagination
     let logs = await AdminAuditLog.find(query)
       .sort(sort)
       .skip(skip)
       .limit(parsedLimit)
       .populate('admin', 'name email role');
 
-    // Filter by userRole if specified and includeStudentActions is false
+    const includeStudents = includeStudentActions === 'true';
     let filteredLogs = logs;
     if (userRole && userRole !== '') {
       filteredLogs = logs.filter(log => log.admin?.role === userRole);
     } else if (!includeStudents && userRole !== 'admin') {
-      // If we're not including student actions, only show admin actions
       filteredLogs = logs.filter(log => log.admin?.role === 'admin');
     }
 
-    // Get total count with the same filters
-    let totalQuery = { ...query };
-    
-    // For total count, we need to count filtered logs if we applied role filters
     let total;
     if (userRole || !includeStudents) {
-      // Get all logs matching the query (without pagination) to count filtered results
       const allLogs = await AdminAuditLog.find(query).populate('admin', 'role');
       let filteredAllLogs = allLogs;
-      
       if (userRole && userRole !== '') {
         filteredAllLogs = allLogs.filter(log => log.admin?.role === userRole);
       } else if (!includeStudents) {
         filteredAllLogs = allLogs.filter(log => log.admin?.role === 'admin');
       }
-      
       total = filteredAllLogs.length;
-      
-      // Adjust pagination for filtered logs
       const start = skip;
       const end = start + parsedLimit;
       filteredLogs = filteredAllLogs.slice(start, end);
@@ -488,17 +695,7 @@ router.get('/audit-logs', async (req, res, next) => {
 
 router.get('/audit-logs/export', async (req, res, next) => {
   try {
-    const {
-      action,
-      targetType,
-      adminId,
-      targetId,
-      q,
-      from,
-      to,
-      limit = '1000',
-    } = req.query;
-
+    const { action, targetType, adminId, targetId, q, from, to, limit = '1000' } = req.query;
     const query = {};
     if (action) query.action = String(action);
     if (targetType) query.targetType = String(targetType);
@@ -533,16 +730,7 @@ router.get('/audit-logs/export', async (req, res, next) => {
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="admin-audit-logs.csv"');
 
-    const header = [
-      'createdAt',
-      'adminName',
-      'adminEmail',
-      'action',
-      'targetType',
-      'targetId',
-      'detailsJson',
-    ];
-
+    const header = ['createdAt', 'adminName', 'adminEmail', 'action', 'targetType', 'targetId', 'detailsJson'];
     const rows = logs.map((log) => {
       const detailsJson = JSON.stringify(log.details ?? {});
       return [
@@ -566,87 +754,117 @@ router.get('/audit-logs/export', async (req, res, next) => {
   }
 });
 
-router.get('/analytics', async (req, res, next) => {
+router.delete('/audit-logs/:id', async (req, res, next) => {
   try {
-    const [
-      rentalPending,
-      rentalApproved,
-      rentalRejected,
-      taskPending,
-      taskApproved,
-      taskRejected,
-      rentalAvg,
-      taskAvg,
-    ] = await Promise.all([
-      Item.countDocuments({ moderationStatus: 'pending' }),
-      Item.countDocuments({ moderationStatus: 'approved' }),
-      Item.countDocuments({ moderationStatus: 'rejected' }),
-      Task.countDocuments({ moderationStatus: 'pending' }),
-      Task.countDocuments({ moderationStatus: 'approved' }),
-      Task.countDocuments({ moderationStatus: 'rejected' }),
-      Item.aggregate([
-        { $match: { moderationStatus: 'approved', moderatedAt: { $ne: null } } },
-        { $project: { diffMs: { $subtract: ['$moderatedAt', '$createdAt'] } } },
-        { $group: { _id: null, avgDiffMs: { $avg: '$diffMs' } } },
-      ]),
-      Task.aggregate([
-        { $match: { moderationStatus: 'approved', moderatedAt: { $ne: null } } },
-        { $project: { diffMs: { $subtract: ['$moderatedAt', '$createdAt'] } } },
-        { $group: { _id: null, avgDiffMs: { $avg: '$diffMs' } } },
-      ]),
-    ]);
-
-    const rentalAvgHours = rentalAvg?.[0]?.avgDiffMs ? rentalAvg[0].avgDiffMs / 3600000 : 0;
-    const taskAvgHours = taskAvg?.[0]?.avgDiffMs ? taskAvg[0].avgDiffMs / 3600000 : 0;
-
-    res.json({
-      rentals: {
-        pending: rentalPending,
-        approved: rentalApproved,
-        rejected: rentalRejected,
-        avgModerationHours: rentalAvgHours,
-      },
-      tasks: {
-        pending: taskPending,
-        approved: taskApproved,
-        rejected: taskRejected,
-        avgModerationHours: taskAvgHours,
-      },
-      overall: {
-        pending: rentalPending + taskPending,
-        approved: rentalApproved + taskApproved,
-        rejected: rentalRejected + taskRejected,
-      },
-    });
+    const deleted = await AdminAuditLog.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'Audit log not found' });
+    res.json({ message: 'Audit log deleted successfully' });
   } catch (err) {
     next(err);
   }
 });
 
-router.get('/queue-stats', async (req, res, next) => {
+// -------------------- System Settings --------------------
+const SystemSettings = require('../models/SystemSettings');
+
+router.get('/settings', async (req, res, next) => {
   try {
-    const now = new Date();
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    let settings = await SystemSettings.findOne();
+    if (!settings) settings = await SystemSettings.create({});
+    res.json(settings);
+  } catch (err) {
+    next(err);
+  }
+});
 
-    const [staleRentals, staleTasks, recentRejectedRentals, recentRejectedTasks] = await Promise.all([
-      Item.countDocuments({ moderationStatus: 'pending', createdAt: { $lte: sevenDaysAgo } }),
-      Task.countDocuments({ moderationStatus: 'pending', createdAt: { $lte: sevenDaysAgo } }),
-      Item.countDocuments({
-        moderationStatus: 'rejected',
-        moderatedAt: { $gte: sevenDaysAgo },
-      }),
-      Task.countDocuments({
-        moderationStatus: 'rejected',
-        moderatedAt: { $gte: sevenDaysAgo },
-      }),
-    ]);
-
-    res.json({
-      staleRentals,
-      staleTasks,
-      recentRejectedRentals,
-      recentRejectedTasks,
+router.put('/settings', async (req, res, next) => {
+  try {
+    const settings = await SystemSettings.findOneAndUpdate({}, req.body, { new: true, upsert: true });
+    await writeAuditLog({
+      adminId: req.user._id,
+      action: 'settings_updated',
+      targetType: 'systemSettings',
     });
+    res.json(settings);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// -------------------- Disputes --------------------
+const Dispute = require('../models/Dispute');
+
+router.get('/disputes', async (req, res, next) => {
+  try {
+    const disputes = await Dispute.find()
+      .populate('reporter reportedUser', 'name email')
+      .populate('messages.sender', 'name')
+      .sort({ createdAt: -1 });
+    res.json(disputes);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch('/disputes/:id/resolve', async (req, res, next) => {
+  try {
+    const { status, resolutionNote = '' } = req.body;
+    if (!['resolved', 'dismissed'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid dispute status' });
+    }
+
+    const dispute = await Dispute.findById(req.params.id);
+    if (!dispute) return res.status(404).json({ message: 'Dispute not found' });
+    dispute.status = status;
+    dispute.resolutionNote = resolutionNote;
+    await dispute.save();
+
+    // Resolution should succeed even if audit logging has schema/data issues.
+    try {
+      await writeAuditLog({
+        adminId: req.user._id,
+        action: status === 'dismissed' ? 'dispute_dismissed' : 'dispute_resolved',
+        targetType: 'dispute',
+        targetId: dispute._id,
+        details: { resolutionNote },
+      });
+    } catch (auditErr) {
+      console.error('Audit log failed for dispute resolution:', auditErr);
+    }
+
+    res.json(dispute);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/disputes/:id/message', async (req, res, next) => {
+  try {
+    const { content } = req.body;
+    if (!content || !content.trim()) {
+      return res.status(400).json({ message: 'Message cannot be empty' });
+    }
+    const dispute = await Dispute.findById(req.params.id);
+    if (!dispute) return res.status(404).json({ message: 'Dispute not found' });
+    dispute.messages.push({
+      sender: req.user._id,
+      isAdmin: true,
+      content: content.trim(),
+    });
+    await dispute.save();
+    await dispute.populate('reporter reportedUser', 'name email');
+    await dispute.populate('messages.sender', 'name');
+    res.status(201).json(dispute);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/disputes/:id', async (req, res, next) => {
+  try {
+    const deleted = await Dispute.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'Dispute not found' });
+    res.json({ message: 'Dispute deleted successfully' });
   } catch (err) {
     next(err);
   }

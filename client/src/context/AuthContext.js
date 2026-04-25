@@ -21,7 +21,6 @@ export const AuthProvider = ({ children }) => {
     if (storedTheme === 'light' || storedTheme === 'dark') {
       setTheme(storedTheme);
     }
-
     setAuthReady(true);
   }, []);
 
@@ -52,9 +51,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider
-      value={{ token, user, login, logout, theme, toggleTheme, authReady }}
-    >
+    <AuthContext.Provider value={{ token, user, login, logout, theme, toggleTheme, authReady }}>
       {children}
     </AuthContext.Provider>
   );
