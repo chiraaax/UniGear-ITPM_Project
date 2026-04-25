@@ -12,10 +12,12 @@ export const AuthProvider = ({ children }) => {
     const storedToken = localStorage.getItem('unigear_token');
     const storedUser = localStorage.getItem('unigear_user');
     const storedTheme = localStorage.getItem('unigear_theme');
+
     if (storedToken && storedUser) {
       setToken(storedToken);
       setUser(JSON.parse(storedUser));
     }
+
     if (storedTheme === 'light' || storedTheme === 'dark') {
       setTheme(storedTheme);
     }
@@ -56,4 +58,3 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
-

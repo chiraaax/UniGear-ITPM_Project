@@ -14,7 +14,7 @@ import {
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000/api";
 
 const StatusDashboard = () => {
-  const { token, user } = useAuth();
+  const { token, user, authReady } = useAuth();
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
@@ -31,6 +31,8 @@ const StatusDashboard = () => {
   };
 
   useEffect(() => {
+    if (!authReady) return;
+
     if (!token) {
       navigate("/auth");
       return;
@@ -64,7 +66,7 @@ const StatusDashboard = () => {
     }
 
     load();
-  }, [token, navigate]);
+  }, [authReady, token, navigate]);
 
   // ===== FILTER TASKS =====
   const pendingTasks = myTasks.filter((t) =>
