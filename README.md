@@ -1,8 +1,8 @@
-### 🎓 UniGear – University Life Support System
+# 🎓 UniGear – University Life Support System
 
 UniGear is a full-stack web application designed to support university students by providing a platform for renting resources, managing tasks, handling transactions, and interacting with peers.
 
-### 📌 Project Overview
+# 📌 Project Overview
 
 UniGear helps students:
 
@@ -13,7 +13,7 @@ Track activities through dashboards
 
 This system improves resource utilization, collaboration, and student convenience within a university environment.
 
-### 🚀 Features
+# 🚀 Features
 
 🔹 Rental Module
 Add, edit, delete rental items
@@ -40,30 +40,30 @@ Loyalty points system
 🔹 Feedback & Ratings
 Users can rate and provide feedback
 
-### 🛠️ Tech Stack
+# 🛠️ Tech Stack
 
-# Frontend
+## Frontend
 React.js
 CSS
 Playwright (Testing)
 
-# Backend
+## Backend
 Node.js
 Express.js
 
-# Database
+## Database
 MongoDB (Mongoose)
 
-# Other Tools
+## Other Tools
 AWS S3 (image upload)
 Git & GitHub (version control)
 
-### Run the application
+## Run the application
 
-# Start backend
+### Start backend
 cd server
 npm start
 
-# Start frontend
+### Start frontend
 cd client
 npm start
