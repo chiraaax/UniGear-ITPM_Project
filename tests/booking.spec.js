@@ -129,11 +129,12 @@ test.describe('Booking flow', () => {
     await page.locator('input[type="date"]').nth(0).fill(fmt(tomorrow));
     await page.locator('input[type="date"]').nth(1).fill(fmt(dayAfter));
 
-    page.once('dialog', async (dialog) => {
-      expect(dialog.message()).toContain('Item already booked for selected dates');
-      await dialog.accept();
-    });
+    const dialogPromise = page.waitForEvent('dialog');
 
     await page.getByRole('button', { name: /book now/i }).click();
+
+    const dialog = await dialogPromise;
+    expect(dialog.message()).toContain('Item already booked for selected dates');
+    await dialog.accept();
   });
 });
