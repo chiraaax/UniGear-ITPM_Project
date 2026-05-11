@@ -21,6 +21,7 @@ jobs:
       AWS_REGION: ${{ secrets.AWS_REGION }}
       AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
       NEXT_PUBLIC_S3_BASE_URL: ${{ secrets.NEXT_PUBLIC_S3_BASE_URL }}
+      REACT_APP_API_URL: http://localhost:5000
 
     steps:
       - uses: actions/checkout@v4
@@ -62,7 +63,7 @@ jobs:
           exit 1
 
       - name: Start frontend
-        run: npm start > ../client.log 2>&1 &
+        run: CI=false HOST=0.0.0.0 PORT=3000 npm start > ../client.log 2>&1 &
         working-directory: ./client
 
       - name: Wait for frontend
