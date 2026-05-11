@@ -2,26 +2,34 @@ const mongoose = require('mongoose');
 
 const feedbackSchema = new mongoose.Schema(
   {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+    name: {
+      type: String,
       required: true,
     },
-    item: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Item',
+    email: {
+      type: String,
+      required: true,
+    },
+    phone: {
+      type: String,
+      required: true,
+    },
+    feedback: {
+      type: String,
       required: true,
     },
     rating: {
       type: Number,
-      required: true,
       min: 1,
       max: 5,
     },
-    comment: {
-      type: String,
-      required: true,
-      trim: true,
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    item: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Item',
     },
   },
   {
@@ -29,6 +37,4 @@ const feedbackSchema = new mongoose.Schema(
   }
 );
 
-const Feedback = mongoose.model('Feedback', feedbackSchema);
-
-module.exports = Feedback;
+module.exports = mongoose.model('Feedback', feedbackSchema);

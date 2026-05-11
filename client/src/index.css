@@ -8,6 +8,10 @@ body,
   height: 100%;
 }
 
+html {
+  font-size: 17px;
+}
+
 body {
-  @apply bg-slate-950 text-slate-50 antialiased;
+  @apply bg-black text-slate-50 antialiased;
 }

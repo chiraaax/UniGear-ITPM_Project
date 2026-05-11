@@ -5,22 +5,33 @@ const Transaction = require('../models/Transaction');
 const Notification = require('../models/Notification');
 const auth = require('../middleware/auth');
 const requireMinTrustScore = require('../middleware/trustCheck');
+const { deleteTask, getTaskById, acceptTask, updateStatus } = require('../controllers/taskController');
 
 const router = express.Router();
 
 // CREATE task (subject to TrustScore rule)
 router.post('/', auth, requireMinTrustScore(2.0), async (req, res, next) => {
   try {
-    const { description, budget, deadline, location } = req.body;
+    console.log('Received task data:', req.body); // Debug log
+    const { description, budget, deadline, location, category } = req.body;
+    console.log('Extracted category:', category); // Debug log
+
+    // Validate required fields
+    if (!category || category.trim() === '') {
+      return res.status(400).json({ message: 'Category is required' });
+    }
+
     const task = await Task.create({
       creator: req.user._id,
-      description,
+      description: description.trim(),
       budget,
       deadline,
-      location,
+      location: location.trim(),
+      category: category.trim(),
     });
     res.status(201).json(task);
   } catch (err) {
+    console.error('Task creation error:', err.message); // Debug log
     next(err);
   }
 });
@@ -28,7 +39,28 @@ router.post('/', auth, requireMinTrustScore(2.0), async (req, res, next) => {
 // LIST tasks for job board
 router.get('/', async (req, res, next) => {
   try {
-    const tasks = await Task.find().sort({ createdAt: -1 }).populate('creator', 'name trustScore');
+    const { search, category, status } = req.query;
+    let query = {};
+
+    if (search) {
+      query.description = { $regex: search, $options: 'i' };
+    }
+
+    if (category && category !== 'All') {
+      query.category = category;
+    }
+
+    if (status && status !== 'All') {
+      const statusMapping = {
+        pending: 'Pending',
+        inprogress: 'In Progress',
+        completed: 'Completed',
+        cancelled: 'Cancelled',
+      };
+      query.status = statusMapping[status] || status;
+    }
+
+    const tasks = await Task.find(query).sort({ createdAt: -1 }).populate('creator', 'name trustScore');
     res.json(tasks);
   } catch (err) {
     next(err);
@@ -58,14 +90,14 @@ router.patch('/:id', auth, async (req, res, next) => {
     if (!task.creator.equals(req.user._id)) {
       return res.status(403).json({ message: 'You can only edit your own tasks.' });
     }
-
-    if (task.status !== 'Open') {
+console.log('Current task status:', task.status); // Debug log
+    if (task.status !== 'Pending') {
       return res.status(400).json({
         message: 'Task cannot be edited once an offer has been accepted.',
       });
     }
 
-    const updatableFields = ['description', 'budget', 'deadline', 'location'];
+    const updatableFields = ['description', 'budget', 'deadline', 'location', 'category'];
     updatableFields.forEach((field) => {
       if (req.body[field] !== undefined) {
         task[field] = req.body[field];
@@ -74,6 +106,31 @@ router.patch('/:id', auth, async (req, res, next) => {
 
     await task.save();
     res.json(task);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE task (only if no offers have been accepted)
+router.delete('/:id', auth, async (req, res, next) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    if (!task.creator.equals(req.user._id)) {
+      return res.status(403).json({ message: 'You can only delete your own tasks.' });
+    }
+
+    if (task.status !== 'Pending') {
+      return res.status(400).json({
+        message: 'Task cannot be deleted once an offer has been accepted.',
+      });
+    }
+
+    await task.deleteOne();
+    res.json({ message: 'Task deleted successfully.' });
   } catch (err) {
     next(err);
   }
@@ -88,7 +145,7 @@ router.post('/:id/offers', auth, async (req, res, next) => {
       return res.status(404).json({ message: 'Task not found' });
     }
 
-    if (task.status !== 'Open') {
+    if (task.status !== 'Pending') {
       return res.status(400).json({ message: 'Task is not open for new offers.' });
     }
 
@@ -134,6 +191,38 @@ router.get('/:id/offers', auth, async (req, res, next) => {
   }
 });
 
+router.delete('/:id', auth, deleteTask);
+
+// UPDATE TASK STATUS
+router.put('/status/:id', auth, async (req, res, next) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Check if user can update this task (for now, allow anyone, but in real app might restrict)
+    const { status } = req.body;
+
+    // Map frontend status to backend status
+    const statusMapping = {
+      'Pending': 'Pending',
+      'In Progress': 'In Progress',
+      'Completed': 'Completed',
+      'Cancelled': 'Cancelled'
+    };
+
+    const backendStatus = statusMapping[status] || status;
+    task.status = backendStatus;
+
+    await task.save();
+    res.json(task);
+  } catch (err) {
+    console.error('Status update failed:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ACCEPT offer for a task -> move task to Assigned and create transaction
 router.post('/:taskId/offers/:offerId/accept', auth, async (req, res, next) => {
   try {
@@ -146,7 +235,7 @@ router.post('/:taskId/offers/:offerId/accept', auth, async (req, res, next) => {
       return res.status(403).json({ message: 'You can only accept offers on your own tasks.' });
     }
 
-    if (task.status !== 'Open') {
+    if (task.status !== 'Pending') {
       return res.status(400).json({ message: 'Task is not open.' });
     }
 
@@ -162,7 +251,7 @@ router.post('/:taskId/offers/:offerId/accept', auth, async (req, res, next) => {
     offer.status = 'accepted';
     await offer.save();
 
-    task.status = 'Assigned';
+    task.status = 'In Progress';
     await task.save();
 
     const transaction = await Transaction.create({
@@ -179,6 +268,16 @@ router.post('/:taskId/offers/:offerId/accept', auth, async (req, res, next) => {
     next(err);
   }
 });
+
+// 🔹 Get single task
+router.get('/:id', getTaskById);
+
+// 🔹 Accept task
+router.patch('/:id/accept', auth, acceptTask);
+
+// 🔹 Update task status
+router.put('/status/:id', auth, updateStatus);
+
 
 module.exports = router;
 

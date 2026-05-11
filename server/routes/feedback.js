@@ -1,99 +1,114 @@
 const express = require('express');
-const router = express.Router();
 const Feedback = require('../models/Feedback');
-const auth = require('../middleware/auth');
+const User = require('../models/User');
+const authMiddleware = require('../middleware/auth');
+const { sendSMS } = require('../utils/smsService');
 
-// Create feedback
-router.post('/', auth, async (req, res) => {
+const router = express.Router();
+
+// CREATE feedback (optional auth support)
+router.post('/', authMiddleware.optionalAuth, async (req, res, next) => {
   try {
-    const { item, rating, comment } = req.body;
-    const feedback = new Feedback({
-      user: req.user.id,
-      item,
-      rating,
-      comment,
+    const { name, email, phone, feedback, rating, itemId } = req.body;
+
+    // Validate required fields (rating is now optional)
+    if (!name || !email || !phone || !feedback) {
+      return res.status(400).json({ message: 'Name, email, phone, and feedback are required' });
+    }
+
+    const newFeedback = await Feedback.create({
+      name: name.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+      feedback: feedback.trim(),
+      rating: rating ? Number(rating) : undefined,
+      user: req.user ? req.user._id : null,
+      item: itemId || null,
     });
-    await feedback.save();
-    res.status(201).json(feedback);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
 
-// Get feedback for an item
-router.get('/item/:itemId', async (req, res) => {
-  try {
-    const feedback = await Feedback.find({ item: req.params.itemId }).populate(
-      'user',
-      'name'
-    );
-    res.json(feedback);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Get feedback by a user
-router.get('/user/:userId', async (req, res) => {
-  try {
-    const feedback = await Feedback.find({ user: req.params.userId }).populate(
-      'item',
-      'name'
-    );
-    res.json(feedback);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Update feedback
-router.put('/:id', auth, async (req, res) => {
-  try {
-    const { rating, comment } = req.body;
-    let feedback = await Feedback.findById(req.params.id);
-
-    if (!feedback) {
-      return res.status(404).json({ message: 'Feedback not found' });
+    // Award 20 loyalty points for giving feedback if user is authenticated
+    if (req.user) {
+      await User.findByIdAndUpdate(req.user._id, { $inc: { loyaltyPoints: 20 } });
     }
 
-    // Check if the user owns the feedback
-    if (feedback.user.toString() !== req.user.id) {
-      return res.status(401).json({ message: 'Not authorized' });
+    // Send SMS notification to the user
+    const ratingText = rating ? `\n\nYour rating: ${rating}/5 stars` : '';
+    const smsMessage = `Thank you for your feedback, ${name}!${ratingText}\nFeedback: ${feedback}\n\nWe appreciate your input!`;
+    const userSmsResult = await sendSMS(phone, smsMessage);
+    if (!userSmsResult.success) {
+      console.warn('Failed to send SMS to user:', userSmsResult.error);
     }
 
-    feedback.rating = rating;
-    feedback.comment = comment;
+    // Also send notification to admin
+    const adminPhoneNumber = process.env.ADMIN_PHONE_NUMBER;
+    if (adminPhoneNumber) {
+      const ratingInfo = rating ? `\nRating: ${rating}/5` : '';
+      const adminMessage = `New feedback received!\nName: ${name}\nPhone: ${phone}\nEmail: ${email}${ratingInfo}\nFeedback: ${feedback.substring(0, 100)}${feedback.length > 100 ? '...' : ''}`;
+      const adminSmsResult = await sendSMS(adminPhoneNumber, adminMessage);
+      if (!adminSmsResult.success) {
+        console.warn('Failed to send SMS to admin:', adminSmsResult.error);
+      }
+    }
 
-    await feedback.save();
-    res.json(feedback);
+    res.status(201).json(newFeedback);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Feedback creation error:', err.message);
+    next(err);
   }
 });
 
-// Delete feedback
-router.delete('/:id', auth, async (req, res) => {
+// LIST all feedback (for admin view)
+router.get('/', authMiddleware, async (req, res, next) => {
+  try {
+    const feedbacks = await Feedback.find().sort({ createdAt: -1 }).populate('user', 'name');
+    res.json(feedbacks);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET feedback for a specific item
+router.get('/item/:itemId', async (req, res, next) => {
+  try {
+    const feedbacks = await Feedback.find({ item: req.params.itemId }).sort({ createdAt: -1 }).populate('user', 'name');
+    res.json(feedbacks);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// UPDATE feedback
+router.put('/:id', authMiddleware, async (req, res, next) => {
   try {
     const feedback = await Feedback.findById(req.params.id);
-
     if (!feedback) {
       return res.status(404).json({ message: 'Feedback not found' });
     }
 
-    // Check if the user owns the feedback
-    if (feedback.user.toString() !== req.user.id) {
-      return res.status(401).json({ message: 'Not authorized' });
-    }
+    const { name, email, feedback: feedbackText, rating } = req.body;
 
-    await feedback.remove();
-    res.json({ message: 'Feedback removed' });
+    feedback.name = name || feedback.name;
+    feedback.email = email || feedback.email;
+    feedback.feedback = feedbackText || feedback.feedback;
+    feedback.rating = rating || feedback.rating;
+
+    await feedback.save();
+    res.json(feedback);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    next(err);
+  }
+});
+
+// DELETE feedback
+router.delete('/:id', authMiddleware, async (req, res, next) => {
+  try {
+    const feedback = await Feedback.findByIdAndDelete(req.params.id);
+    if (!feedback) {
+      return res.status(404).json({ message: 'Feedback not found' });
+    }
+    res.json({ message: 'Feedback deleted successfully' });
+  } catch (err) {
+    next(err);
   }
 });
 

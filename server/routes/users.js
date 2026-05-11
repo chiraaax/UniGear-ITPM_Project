@@ -34,6 +34,52 @@ router.get('/me', auth, async (req, res) => {
   res.json(req.user);
 });
 
+// Create/Update Profile API
+router.put('/profile', auth, async (req, res, next) => {
+  try {
+    const { name, phone, address, profileImage } = req.body;
+    
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (name) user.name = name;
+    if (phone) user.phone = phone;
+    if (address) user.address = address;
+    if (profileImage) user.profileImage = profileImage;
+
+    await user.save();
+    res.json(user);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Update loyalty points API (internal or specific actions)
+router.patch('/loyalty-points', auth, async (req, res, next) => {
+  try {
+    const { points } = req.body;
+    if (typeof points !== 'number') {
+      return res.status(400).json({ message: 'Points must be a number' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    user.loyaltyPoints += points;
+    await user.save();
+    
+    // Add logic for notifications if needed here
+    
+    res.json({ loyaltyPoints: user.loyaltyPoints });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Simple endpoint to update trust score (e.g., after ratings aggregation)
 router.patch('/:id/trust-score', async (req, res, next) => {
   try {
