@@ -33,12 +33,13 @@ export default defineConfig({
     {
       command: 'npm start',
       url: 'http://localhost:3000',
+      cwd: './client',
       reuseExistingServer: !process.env.CI,
       timeout: 120000,
     },
     {
       command: 'npm start',
-      url: 'http://localhost:5000',
+      url: 'http://localhost:5000/api/health',
       cwd: './server',
       reuseExistingServer: !process.env.CI,
       timeout: 120000,
